@@ -87,16 +87,18 @@ export async function POST(request: NextRequest) {
     if (gErr) throw gErr;
 
     // Insert owner as member
-    await supabase.from('group_members').insert({
+    const { error: mErr } = await supabase.from('group_members').insert({
       group_id: group.id,
       user_id: user.id,
       role: 'owner',
       status: 'active',
     });
 
+    if (mErr) throw mErr;
+
     return NextResponse.json({ group }, { status: 201 });
-  } catch (err) {
+  } catch (err: any) {
     console.error('POST /api/groups error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: err?.message || 'Internal server error' }, { status: 500 });
   }
 }

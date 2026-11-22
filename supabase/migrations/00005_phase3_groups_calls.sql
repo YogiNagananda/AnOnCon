@@ -1,9 +1,10 @@
 -- ============================================================
 -- PHASE 3: Groups + Calls Migration
--- Run this in Supabase SQL Editor
+-- Run this in Supabase SQL Editor:
+-- https://supabase.com/dashboard/project/erlixvpvdjxnwtuzmhak/sql
 -- ============================================================
 
--- ─── GROUPS ───────────────────────────────────────────────────
+-- ─── GROUPS TABLE ─────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS groups (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -17,6 +18,11 @@ CREATE TABLE IF NOT EXISTS groups (
   created_at  timestamptz NOT NULL DEFAULT now(),
   updated_at  timestamptz NOT NULL DEFAULT now()
 );
+
+-- Ensure all columns exist even if table was created in an earlier migration
+ALTER TABLE groups ADD COLUMN IF NOT EXISTS max_members int NOT NULL DEFAULT 200;
+ALTER TABLE groups ADD COLUMN IF NOT EXISTS tags text[] DEFAULT '{}';
+ALTER TABLE groups ADD COLUMN IF NOT EXISTS is_public boolean NOT NULL DEFAULT true;
 
 CREATE INDEX IF NOT EXISTS idx_groups_owner ON groups(owner_id);
 CREATE INDEX IF NOT EXISTS idx_groups_public ON groups(is_public) WHERE is_public = true;
@@ -36,6 +42,10 @@ CREATE TABLE IF NOT EXISTS group_members (
   UNIQUE(group_id, user_id)
 );
 
+-- Add status and is_muted columns if they didn't exist in early schema
+ALTER TABLE group_members ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'active';
+ALTER TABLE group_members ADD COLUMN IF NOT EXISTS is_muted boolean NOT NULL DEFAULT false;
+
 CREATE INDEX IF NOT EXISTS idx_group_members_group  ON group_members(group_id);
 CREATE INDEX IF NOT EXISTS idx_group_members_user   ON group_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_group_members_status ON group_members(group_id, status);
@@ -52,8 +62,8 @@ CREATE TABLE IF NOT EXISTS group_messages (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_group_messages_group      ON group_messages(group_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_group_messages_sender     ON group_messages(sender_id);
+CREATE INDEX IF NOT EXISTS idx_group_messages_group  ON group_messages(group_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_group_messages_sender ON group_messages(sender_id);
 
 -- ─── CALLS TABLE ──────────────────────────────────────────────
 
@@ -72,6 +82,10 @@ CREATE TABLE IF NOT EXISTS calls (
   created_at           timestamptz NOT NULL DEFAULT now(),
   updated_at           timestamptz NOT NULL DEFAULT now()
 );
+
+ALTER TABLE calls ADD COLUMN IF NOT EXISTS livekit_room_name text;
+ALTER TABLE calls ADD COLUMN IF NOT EXISTS video_enabled_caller boolean NOT NULL DEFAULT false;
+ALTER TABLE calls ADD COLUMN IF NOT EXISTS video_enabled_receiver boolean NOT NULL DEFAULT false;
 
 CREATE INDEX IF NOT EXISTS idx_calls_chat     ON calls(chat_id);
 CREATE INDEX IF NOT EXISTS idx_calls_caller   ON calls(caller_id);
@@ -101,11 +115,11 @@ BEGIN NEW.updated_at = now(); RETURN NEW; END;
 $$;
 
 DO $$ BEGIN
-  CREATE TRIGGER trg_groups_updated_at         BEFORE UPDATE ON groups         FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+  CREATE TRIGGER trg_groups_updated_at BEFORE UPDATE ON groups FOR EACH ROW EXECUTE FUNCTION update_updated_at();
   EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 DO $$ BEGIN
-  CREATE TRIGGER trg_group_members_updated_at  BEFORE UPDATE ON group_members  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+  CREATE TRIGGER trg_group_members_updated_at BEFORE UPDATE ON group_members FOR EACH ROW EXECUTE FUNCTION update_updated_at();
   EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 DO $$ BEGIN
@@ -113,7 +127,7 @@ DO $$ BEGIN
   EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 DO $$ BEGIN
-  CREATE TRIGGER trg_calls_updated_at          BEFORE UPDATE ON calls          FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+  CREATE TRIGGER trg_calls_updated_at BEFORE UPDATE ON calls FOR EACH ROW EXECUTE FUNCTION update_updated_at();
   EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -125,7 +139,12 @@ ALTER TABLE group_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE calls          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE group_invites  ENABLE ROW LEVEL SECURITY;
 
--- groups: public groups visible to all authenticated users; private groups only to members
+-- Clean existing policies so this script can be re-run safely
+DROP POLICY IF EXISTS "groups_select" ON groups;
+DROP POLICY IF EXISTS "groups_insert" ON groups;
+DROP POLICY IF EXISTS "groups_update" ON groups;
+DROP POLICY IF EXISTS "groups_delete" ON groups;
+
 CREATE POLICY "groups_select" ON groups FOR SELECT TO authenticated
   USING (is_public = true OR owner_id = auth.uid() OR
          EXISTS (SELECT 1 FROM group_members gm WHERE gm.group_id = id AND gm.user_id = auth.uid() AND gm.status = 'active'));
@@ -140,7 +159,12 @@ CREATE POLICY "groups_update" ON groups FOR UPDATE TO authenticated
 CREATE POLICY "groups_delete" ON groups FOR DELETE TO authenticated
   USING (owner_id = auth.uid());
 
--- group_members
+-- group_members policies
+DROP POLICY IF EXISTS "gm_select" ON group_members;
+DROP POLICY IF EXISTS "gm_insert" ON group_members;
+DROP POLICY IF EXISTS "gm_update" ON group_members;
+DROP POLICY IF EXISTS "gm_delete" ON group_members;
+
 CREATE POLICY "gm_select" ON group_members FOR SELECT TO authenticated
   USING (user_id = auth.uid() OR
          EXISTS (SELECT 1 FROM group_members gm2 WHERE gm2.group_id = group_id AND gm2.user_id = auth.uid() AND gm2.status = 'active'));
@@ -161,7 +185,11 @@ CREATE POLICY "gm_delete" ON group_members FOR DELETE TO authenticated
   USING (user_id = auth.uid() OR
          EXISTS (SELECT 1 FROM group_members gm WHERE gm.group_id = group_id AND gm.user_id = auth.uid() AND gm.role IN ('owner','admin') AND gm.status = 'active'));
 
--- group_messages: active members can read (blocked users' messages filtered client-side); muted members cannot insert
+-- group_messages policies
+DROP POLICY IF EXISTS "gmsg_select" ON group_messages;
+DROP POLICY IF EXISTS "gmsg_insert" ON group_messages;
+DROP POLICY IF EXISTS "gmsg_update" ON group_messages;
+
 CREATE POLICY "gmsg_select" ON group_messages FOR SELECT TO authenticated
   USING (
     EXISTS (SELECT 1 FROM group_members gm WHERE gm.group_id = group_id AND gm.user_id = auth.uid() AND gm.status = 'active')
@@ -177,7 +205,11 @@ CREATE POLICY "gmsg_update" ON group_messages FOR UPDATE TO authenticated
   USING (sender_id = auth.uid() OR
          EXISTS (SELECT 1 FROM group_members gm WHERE gm.group_id = group_id AND gm.user_id = auth.uid() AND gm.role IN ('owner','admin') AND gm.status = 'active'));
 
--- calls: caller or receiver can see/update
+-- calls policies
+DROP POLICY IF EXISTS "calls_select" ON calls;
+DROP POLICY IF EXISTS "calls_insert" ON calls;
+DROP POLICY IF EXISTS "calls_update" ON calls;
+
 CREATE POLICY "calls_select" ON calls FOR SELECT TO authenticated
   USING (caller_id = auth.uid() OR receiver_id = auth.uid());
 
@@ -187,13 +219,27 @@ CREATE POLICY "calls_insert" ON calls FOR INSERT TO authenticated
 CREATE POLICY "calls_update" ON calls FOR UPDATE TO authenticated
   USING (caller_id = auth.uid() OR receiver_id = auth.uid());
 
--- group_invites
+-- group_invites policies
+DROP POLICY IF EXISTS "invites_select" ON group_invites;
+DROP POLICY IF EXISTS "invites_insert" ON group_invites;
+
 CREATE POLICY "invites_select" ON group_invites FOR SELECT TO authenticated USING (true);
 CREATE POLICY "invites_insert" ON group_invites FOR INSERT TO authenticated
   WITH CHECK (EXISTS (SELECT 1 FROM group_members gm WHERE gm.group_id = group_id AND gm.user_id = auth.uid() AND gm.role IN ('owner','admin') AND gm.status = 'active'));
 
 -- ─── REALTIME ─────────────────────────────────────────────────
 
-ALTER PUBLICATION supabase_realtime ADD TABLE group_messages;
-ALTER PUBLICATION supabase_realtime ADD TABLE group_members;
-ALTER PUBLICATION supabase_realtime ADD TABLE calls;
+DO $$ BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE group_messages;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE group_members;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE calls;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
