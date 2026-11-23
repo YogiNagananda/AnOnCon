@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { filterMessageContent } from '@/lib/safety/messageFilter';
 
 type Params = { params: Promise<{ id: string }> };
@@ -12,8 +12,10 @@ export async function GET(request: NextRequest, { params }: Params) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    const adminSupabase = await createAdminClient();
+
     // Check active membership
-    const { data: mem } = await supabase
+    const { data: mem } = await adminSupabase
       .from('group_members')
       .select('id')
       .eq('group_id', groupId)
@@ -24,7 +26,7 @@ export async function GET(request: NextRequest, { params }: Params) {
     if (!mem) return NextResponse.json({ error: 'Not a member' }, { status: 403 });
 
     const before = request.nextUrl.searchParams.get('before');
-    let query = supabase
+    let query = adminSupabase
       .from('group_messages')
       .select('id, group_id, sender_id, content, is_deleted, created_at')
       .eq('group_id', groupId)
@@ -38,7 +40,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     // Fetch sender profiles
     const senderIds = [...new Set((messages ?? []).map((m: { sender_id: string }) => m.sender_id))];
-    const { data: profiles } = await supabase
+    const { data: profiles } = await adminSupabase
       .from('public_profiles')
       .select('id, display_name, avatar_url')
       .in('id', senderIds);
@@ -64,17 +66,26 @@ export async function POST(request: NextRequest, { params }: Params) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    const adminSupabase = await createAdminClient();
+
     const { content } = await request.json();
     if (!content?.trim()) return NextResponse.json({ error: 'Content required' }, { status: 400 });
     if (content.length > 2000) return NextResponse.json({ error: 'Message too long (max 2000 chars)' }, { status: 400 });
 
     // Check membership & join timestamp for 24h restrictions
-    const { data: memberRecord } = await supabase
+    const { data: memberRecord } = await adminSupabase
       .from('group_members')
-      .select('created_at, status')
+      .select('created_at, status, is_muted')
       .eq('group_id', groupId)
       .eq('user_id', user.id)
       .maybeSingle();
+
+    if (!memberRecord || memberRecord.status !== 'active') {
+      return NextResponse.json({ error: 'Not an active group member' }, { status: 403 });
+    }
+    if (memberRecord.is_muted) {
+      return NextResponse.json({ error: 'You are muted in this group' }, { status: 403 });
+    }
 
     // Automated server-side content filter (bad words & 24h link/phone/email block)
     const filterCheck = filterMessageContent(content, memberRecord?.created_at);
@@ -86,15 +97,13 @@ export async function POST(request: NextRequest, { params }: Params) {
       }, { status: 422 });
     }
 
-    // RLS enforces mute/active membership check
-    const { data: msg, error } = await supabase
+    const { data: msg, error } = await adminSupabase
       .from('group_messages')
       .insert({ group_id: groupId, sender_id: user.id, content: content.trim() })
       .select()
       .single();
 
     if (error) {
-      if (error.code === '42501') return NextResponse.json({ error: 'You are muted or not an active member' }, { status: 403 });
       throw error;
     }
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -11,11 +11,13 @@ export async function POST(_req: NextRequest, { params }: Params) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { data: group } = await supabase.from('groups').select('*').eq('id', groupId).single();
+    const adminSupabase = await createAdminClient();
+
+    const { data: group } = await adminSupabase.from('groups').select('*').eq('id', groupId).single();
     if (!group) return NextResponse.json({ error: 'Group not found' }, { status: 404 });
 
     // Check ban
-    const { data: existing } = await supabase
+    const { data: existing } = await adminSupabase
       .from('group_members')
       .select('status, role')
       .eq('group_id', groupId)
@@ -30,7 +32,7 @@ export async function POST(_req: NextRequest, { params }: Params) {
     }
 
     // Check capacity
-    const { count } = await supabase
+    const { count } = await adminSupabase
       .from('group_members')
       .select('*', { count: 'exact', head: true })
       .eq('group_id', groupId)
@@ -43,9 +45,9 @@ export async function POST(_req: NextRequest, { params }: Params) {
     const status = group.is_public ? 'active' : 'pending';
 
     if (existing) {
-      await supabase.from('group_members').update({ status }).eq('group_id', groupId).eq('user_id', user.id);
+      await adminSupabase.from('group_members').update({ status }).eq('group_id', groupId).eq('user_id', user.id);
     } else {
-      await supabase.from('group_members').insert({ group_id: groupId, user_id: user.id, role: 'member', status });
+      await adminSupabase.from('group_members').insert({ group_id: groupId, user_id: user.id, role: 'member', status });
     }
 
     return NextResponse.json({ success: true, status });

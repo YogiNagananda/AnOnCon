@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -11,7 +11,9 @@ export async function POST(_req: NextRequest, { params }: Params) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { data: mem } = await supabase
+    const adminSupabase = await createAdminClient();
+
+    const { data: mem } = await adminSupabase
       .from('group_members')
       .select('role')
       .eq('group_id', groupId)
@@ -23,7 +25,7 @@ export async function POST(_req: NextRequest, { params }: Params) {
       return NextResponse.json({ error: 'Only admins can generate invite links' }, { status: 403 });
     }
 
-    const { data: invite, error } = await supabase
+    const { data: invite, error } = await adminSupabase
       .from('group_invites')
       .insert({ group_id: groupId, created_by: user.id })
       .select()

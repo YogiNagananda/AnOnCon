@@ -14,11 +14,13 @@ export async function GET(request: NextRequest) {
     const page   = Math.max(0, parseInt(searchParams.get('page') ?? '0', 10));
     const limit  = 20;
 
-    let query = supabase
+    const adminSupabase = await createAdminClient();
+
+    let query = adminSupabase
       .from('groups')
       .select(`
         id, name, description, icon_url, tags, is_public, max_members, owner_id, created_at,
-        group_members!inner(count)
+        group_members(count)
       `, { count: 'exact' })
       .eq('is_public', true)
       .order('created_at', { ascending: false })
@@ -34,14 +36,14 @@ export async function GET(request: NextRequest) {
     const { data, error, count } = await query;
     if (error) throw error;
 
-    // Also get user's joined groups
-    const { data: myGroups } = await supabase
+    // Also get user's joined groups via adminSupabase to prevent client RLS recursion
+    const { data: myMemberships } = await adminSupabase
       .from('group_members')
       .select('group_id')
       .eq('user_id', user.id)
       .eq('status', 'active');
 
-    const joinedIds = new Set((myGroups ?? []).map((g: { group_id: string }) => g.group_id));
+    const joinedIds = new Set((myMemberships ?? []).map((g: { group_id: string }) => g.group_id));
 
     const enriched = (data ?? []).map((g: Record<string, unknown>) => ({
       ...g,
@@ -50,10 +52,26 @@ export async function GET(request: NextRequest) {
       group_members: undefined,
     }));
 
-    return NextResponse.json({ groups: enriched, total: count ?? 0, page });
-  } catch (err) {
+    // Also load the user's joined groups list
+    let myGroups: Record<string, unknown>[] = [];
+    if (joinedIds.size > 0) {
+      const { data: myGroupDetails } = await adminSupabase
+        .from('groups')
+        .select('*')
+        .in('id', Array.from(joinedIds));
+
+      myGroups = (myGroupDetails ?? []).map((g: Record<string, unknown>) => ({
+        ...g,
+        tags: g.tags ?? [],
+        member_count: 0,
+        is_joined: true,
+      }));
+    }
+
+    return NextResponse.json({ groups: enriched, my_groups: myGroups, total: count ?? 0, page });
+  } catch (err: any) {
     console.error('GET /api/groups error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: err?.message || 'Internal server error' }, { status: 500 });
   }
 }
 

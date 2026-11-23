@@ -41,6 +41,8 @@ export default function GroupsPage() {
     return () => clearTimeout(t);
   }, [search]);
 
+  const [myGroups, setMyGroups] = useState<GroupItem[]>([]);
+
   const fetchGroups = useCallback(async () => {
     setLoading(true);
     try {
@@ -48,7 +50,10 @@ export default function GroupsPage() {
       if (debouncedSearch) params.set('search', debouncedSearch);
       const res = await fetch(`/api/groups?${params}`);
       const data = await res.json();
-      if (res.ok) setGroups(data.groups ?? []);
+      if (res.ok) {
+        setGroups(data.groups ?? []);
+        if (data.my_groups) setMyGroups(data.my_groups);
+      }
     } catch {
       toast.error('Failed to load groups');
     } finally {
@@ -57,31 +62,6 @@ export default function GroupsPage() {
   }, [debouncedSearch]);
 
   useEffect(() => { fetchGroups(); }, [fetchGroups]);
-
-  // Also show my groups
-  const [myGroups, setMyGroups] = useState<GroupItem[]>([]);
-  useEffect(() => {
-    async function loadMine() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: memberships } = await supabase
-        .from('group_members')
-        .select('group_id')
-        .eq('user_id', user.id)
-        .eq('status', 'active');
-
-      if (!memberships?.length) return;
-      const ids = memberships.map((m: { group_id: string }) => m.group_id);
-      const { data: gs } = await supabase.from('groups').select('*').in('id', ids);
-      setMyGroups((gs ?? []).map((g) => ({
-        ...g,
-        tags: g.tags ?? [],
-        member_count: 0,
-        is_joined: true,
-      })));
-    }
-    loadMine();
-  }, [supabase]);
 
   async function handleJoin(groupId: string) {
     setJoiningId(groupId);

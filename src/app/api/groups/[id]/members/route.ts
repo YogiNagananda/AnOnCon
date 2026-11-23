@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import type { Database } from '@/lib/supabase/types';
 
 type GroupMemberUpdate = Database['public']['Tables']['group_members']['Update'];
@@ -14,7 +14,9 @@ export async function GET(_req: NextRequest, { params }: Params) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { data: members, error } = await supabase
+    const adminSupabase = await createAdminClient();
+
+    const { data: members, error } = await adminSupabase
       .from('group_members')
       .select('id, group_id, user_id, role, status, is_muted, created_at')
       .eq('group_id', groupId)
@@ -25,7 +27,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
 
     // Fetch public profiles for each member
     const userIds = (members ?? []).map((m: { user_id: string }) => m.user_id);
-    const { data: profiles } = await supabase
+    const { data: profiles } = await adminSupabase
       .from('public_profiles')
       .select('id, display_name, avatar_url, is_online')
       .in('id', userIds);
@@ -59,8 +61,10 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       return NextResponse.json({ error: 'target_user_id and action are required' }, { status: 400 });
     }
 
+    const adminSupabase = await createAdminClient();
+
     // Requester's membership
-    const { data: myMem } = await supabase
+    const { data: myMem } = await adminSupabase
       .from('group_members')
       .select('role')
       .eq('group_id', groupId)
@@ -73,7 +77,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     }
 
     // Target's membership
-    const { data: targetMem } = await supabase
+    const { data: targetMem } = await adminSupabase
       .from('group_members')
       .select('role, status')
       .eq('group_id', groupId)
@@ -96,14 +100,14 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     else if (action === 'unmute') update = { is_muted: false };
     else if (action === 'ban')    update = { status: 'banned' };
     else if (action === 'remove') {
-      await supabase.from('group_members').delete().eq('group_id', groupId).eq('user_id', target_user_id);
+      await adminSupabase.from('group_members').delete().eq('group_id', groupId).eq('user_id', target_user_id);
       return NextResponse.json({ success: true });
     } else if (action === 'promote' && myMem.role === 'owner') update = { role: 'admin' };
     else if (action === 'demote'  && myMem.role === 'owner') update = { role: 'member' };
     else if (action === 'approve') update = { status: 'active' };
     else return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
 
-    await supabase.from('group_members').update(update).eq('group_id', groupId).eq('user_id', target_user_id);
+    await adminSupabase.from('group_members').update(update).eq('group_id', groupId).eq('user_id', target_user_id);
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error('PATCH /api/groups/:id/members error:', err);

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import type { Database } from '@/lib/supabase/types';
 
 type GroupUpdate = Database['public']['Tables']['groups']['Update'];
@@ -14,7 +14,9 @@ export async function GET(_req: NextRequest, { params }: Params) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { data: group, error } = await supabase
+    const adminSupabase = await createAdminClient();
+
+    const { data: group, error } = await adminSupabase
       .from('groups')
       .select('*')
       .eq('id', id)
@@ -23,7 +25,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
     if (error || !group) return NextResponse.json({ error: 'Group not found' }, { status: 404 });
 
     // Check membership
-    const { data: myMembership } = await supabase
+    const { data: myMembership } = await adminSupabase
       .from('group_members')
       .select('role, status, is_muted')
       .eq('group_id', id)
@@ -31,7 +33,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
       .single();
 
     // Count active members
-    const { count } = await supabase
+    const { count } = await adminSupabase
       .from('group_members')
       .select('*', { count: 'exact', head: true })
       .eq('group_id', id)
@@ -52,8 +54,10 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    const adminSupabase = await createAdminClient();
+
     // Check admin/owner
-    const { data: mem } = await supabase
+    const { data: mem } = await adminSupabase
       .from('group_members')
       .select('role')
       .eq('group_id', id)
@@ -73,7 +77,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     if (mem.role === 'owner' && body.is_public !== undefined) allowed.is_public = body.is_public;
     if (body.icon_url !== undefined) allowed.icon_url = body.icon_url;
 
-    const { data: updated, error } = await supabase
+    const { data: updated, error } = await adminSupabase
       .from('groups')
       .update(allowed)
       .eq('id', id)
@@ -96,12 +100,14 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { data: group } = await supabase.from('groups').select('owner_id').eq('id', id).single();
+    const adminSupabase = await createAdminClient();
+
+    const { data: group } = await adminSupabase.from('groups').select('owner_id').eq('id', id).single();
     if (!group || group.owner_id !== user.id) {
       return NextResponse.json({ error: 'Forbidden — only the owner can delete a group' }, { status: 403 });
     }
 
-    const { error } = await supabase.from('groups').delete().eq('id', id);
+    const { error } = await adminSupabase.from('groups').delete().eq('id', id);
     if (error) throw error;
     return NextResponse.json({ success: true });
   } catch (err) {

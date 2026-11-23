@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 
 type Params = { params: Promise<{ token: string }> };
 
@@ -11,7 +11,9 @@ export async function POST(_req: NextRequest, { params }: Params) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { data: invite } = await supabase
+    const adminSupabase = await createAdminClient();
+
+    const { data: invite } = await adminSupabase
       .from('group_invites')
       .select('*')
       .eq('token', token)
@@ -27,10 +29,10 @@ export async function POST(_req: NextRequest, { params }: Params) {
 
     const groupId = invite.group_id;
 
-    const { data: group } = await supabase.from('groups').select('max_members').eq('id', groupId).single();
+    const { data: group } = await adminSupabase.from('groups').select('max_members').eq('id', groupId).single();
     if (!group) return NextResponse.json({ error: 'Group not found' }, { status: 404 });
 
-    const { count } = await supabase
+    const { count } = await adminSupabase
       .from('group_members')
       .select('*', { count: 'exact', head: true })
       .eq('group_id', groupId)
@@ -40,7 +42,7 @@ export async function POST(_req: NextRequest, { params }: Params) {
       return NextResponse.json({ error: 'Group is full' }, { status: 400 });
     }
 
-    const { data: existing } = await supabase
+    const { data: existing } = await adminSupabase
       .from('group_members')
       .select('status')
       .eq('group_id', groupId)
@@ -51,13 +53,13 @@ export async function POST(_req: NextRequest, { params }: Params) {
     if (existing?.status === 'active') return NextResponse.json({ error: 'Already a member' }, { status: 400 });
 
     if (existing) {
-      await supabase.from('group_members').update({ status: 'active' }).eq('group_id', groupId).eq('user_id', user.id);
+      await adminSupabase.from('group_members').update({ status: 'active' }).eq('group_id', groupId).eq('user_id', user.id);
     } else {
-      await supabase.from('group_members').insert({ group_id: groupId, user_id: user.id, role: 'member', status: 'active' });
+      await adminSupabase.from('group_members').insert({ group_id: groupId, user_id: user.id, role: 'member', status: 'active' });
     }
 
     // Increment use_count
-    await supabase.from('group_invites').update({ use_count: invite.use_count + 1 }).eq('id', invite.id);
+    await adminSupabase.from('group_invites').update({ use_count: invite.use_count + 1 }).eq('id', invite.id);
 
     return NextResponse.json({ success: true, group_id: groupId });
   } catch (err) {
