@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Search, MessageCircle, User, Settings, Bell, LogOut, Users } from 'lucide-react';
+import { Home, Search, MessageCircle, User, Settings, Bell, LogOut, Users, Compass } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useEffect, useState, Suspense } from 'react';
 import type { Profile } from '@/lib/supabase/types';
@@ -11,6 +11,7 @@ import { CallProvider } from '@/components/calls/call-provider';
 const NAV_ITEMS = [
   { href: '/dashboard', icon: Home, label: 'Home' },
   { href: '/dashboard/discover', icon: Search, label: 'Discover' },
+  { href: '/dashboard/nearby', icon: Compass, label: 'Nearby' },
   { href: '/dashboard/groups', icon: Users, label: 'Groups' },
   { href: '/dashboard/chat', icon: MessageCircle, label: 'Chat' },
   { href: '/dashboard/profile', icon: User, label: 'Profile' },

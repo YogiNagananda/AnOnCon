@@ -541,11 +541,12 @@ export interface Database {
           name: string;
           description: string | null;
           center: unknown; // PostGIS geography type
-          radius: number;
+          radius_meters: number;
+          join_code: string;
+          organizer_id: string;
           is_active: boolean;
           starts_at: string | null;
           ends_at: string | null;
-          created_by: string;
           created_at: string;
           updated_at: string;
         };
@@ -554,11 +555,12 @@ export interface Database {
           name: string;
           description?: string | null;
           center: unknown;
-          radius: number;
+          radius_meters: number;
+          join_code: string;
+          organizer_id: string;
           is_active?: boolean;
           starts_at?: string | null;
           ends_at?: string | null;
-          created_by: string;
           created_at?: string;
           updated_at?: string;
         };
@@ -567,11 +569,12 @@ export interface Database {
           name?: string;
           description?: string | null;
           center?: unknown;
-          radius?: number;
+          radius_meters?: number;
+          join_code?: string;
+          organizer_id?: string;
           is_active?: boolean;
           starts_at?: string | null;
           ends_at?: string | null;
-          created_by?: string;
           updated_at?: string;
         };
         Relationships: [];
@@ -581,6 +584,7 @@ export interface Database {
           id: string;
           zone_id: string;
           user_id: string;
+          is_banned: boolean;
           joined_at: string;
           created_at: string;
           updated_at: string;
@@ -589,6 +593,7 @@ export interface Database {
           id?: string;
           zone_id: string;
           user_id: string;
+          is_banned?: boolean;
           joined_at?: string;
           created_at?: string;
           updated_at?: string;
@@ -597,6 +602,7 @@ export interface Database {
           id?: string;
           zone_id?: string;
           user_id?: string;
+          is_banned?: boolean;
           joined_at?: string;
           updated_at?: string;
         };
