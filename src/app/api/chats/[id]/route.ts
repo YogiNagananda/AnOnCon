@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { filterMessageContent } from '@/lib/safety/messageFilter';
 
 export async function GET(
   request: NextRequest,
@@ -139,6 +140,16 @@ export async function POST(
 
     if (blocks && blocks.length > 0) {
       return NextResponse.json({ error: 'Cannot send message to this user' }, { status: 403 });
+    }
+
+    // Automated server-side content filter (bad words & 24h link/phone/email block)
+    const filterCheck = filterMessageContent(content, chat.created_at);
+    if (!filterCheck.allowed) {
+      return NextResponse.json({
+        error: filterCheck.friendlyMessage,
+        code: 'CONTENT_FILTERED',
+        reason: filterCheck.reason,
+      }, { status: 422 });
     }
 
     // Insert message

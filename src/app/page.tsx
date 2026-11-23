@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Shield, MessageCircle, Users, MapPin, Phone, Eye } from 'lucide-react';
+import { Footer } from '@/components/layout/footer';
 
 export default function LandingPage() {
   return (
@@ -112,17 +113,8 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="border-t border-[var(--color-border)] py-6">
-        <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-[var(--color-muted)]">
-            🔮 Anon Connect — 18+ Anonymous Social Platform
-          </p>
-          <p className="text-xs text-[var(--color-muted)]">
-            By using this app you confirm you are 18 years or older.
-          </p>
-        </div>
-      </footer>
+      {/* Universal Footer */}
+      <Footer />
     </div>
   );
 }

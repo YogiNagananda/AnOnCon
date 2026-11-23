@@ -439,6 +439,12 @@ export interface Database {
           description: string | null;
           status: 'pending' | 'reviewing' | 'resolved' | 'dismissed';
           priority: 'normal' | 'high' | 'urgent';
+          report_type: 'user' | 'message' | 'group' | null;
+          target_message_id: string | null;
+          target_group_id: string | null;
+          admin_notes: string | null;
+          resolved_by: string | null;
+          resolved_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -450,6 +456,12 @@ export interface Database {
           description?: string | null;
           status?: 'pending' | 'reviewing' | 'resolved' | 'dismissed';
           priority?: 'normal' | 'high' | 'urgent';
+          report_type?: 'user' | 'message' | 'group' | null;
+          target_message_id?: string | null;
+          target_group_id?: string | null;
+          admin_notes?: string | null;
+          resolved_by?: string | null;
+          resolved_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -461,6 +473,12 @@ export interface Database {
           description?: string | null;
           status?: 'pending' | 'reviewing' | 'resolved' | 'dismissed';
           priority?: 'normal' | 'high' | 'urgent';
+          report_type?: 'user' | 'message' | 'group' | null;
+          target_message_id?: string | null;
+          target_group_id?: string | null;
+          admin_notes?: string | null;
+          resolved_by?: string | null;
+          resolved_at?: string | null;
           updated_at?: string;
         };
         Relationships: [];
@@ -631,6 +649,54 @@ export interface Database {
         };
         Relationships: [];
       };
+      banned_identifiers: {
+        Row: {
+          id: string;
+          user_id: string | null;
+          ip_hash: string | null;
+          device_hash: string | null;
+          reason: string | null;
+          banned_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string | null;
+          ip_hash?: string | null;
+          device_hash?: string | null;
+          reason?: string | null;
+          banned_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string | null;
+          ip_hash?: string | null;
+          device_hash?: string | null;
+          reason?: string | null;
+          banned_by?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      rate_limits: {
+        Row: {
+          id: string;
+          key: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          key: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          key?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       public_profiles: {
@@ -704,3 +770,5 @@ export type EventZoneMember = Database['public']['Tables']['event_zone_members']
 
 export type FilterPreset = Database['public']['Tables']['filter_presets']['Row'];
 export type PredefinedInterest = Database['public']['Tables']['predefined_interests']['Row'];
+export type BannedIdentifier = Database['public']['Tables']['banned_identifiers']['Row'];
+export type RateLimit = Database['public']['Tables']['rate_limits']['Row'];

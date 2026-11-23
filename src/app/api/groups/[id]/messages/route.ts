@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { filterMessageContent } from '@/lib/safety/messageFilter';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -66,6 +67,24 @@ export async function POST(request: NextRequest, { params }: Params) {
     const { content } = await request.json();
     if (!content?.trim()) return NextResponse.json({ error: 'Content required' }, { status: 400 });
     if (content.length > 2000) return NextResponse.json({ error: 'Message too long (max 2000 chars)' }, { status: 400 });
+
+    // Check membership & join timestamp for 24h restrictions
+    const { data: memberRecord } = await supabase
+      .from('group_members')
+      .select('created_at, status')
+      .eq('group_id', groupId)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    // Automated server-side content filter (bad words & 24h link/phone/email block)
+    const filterCheck = filterMessageContent(content, memberRecord?.created_at);
+    if (!filterCheck.allowed) {
+      return NextResponse.json({
+        error: filterCheck.friendlyMessage,
+        code: 'CONTENT_FILTERED',
+        reason: filterCheck.reason,
+      }, { status: 422 });
+    }
 
     // RLS enforces mute/active membership check
     const { data: msg, error } = await supabase

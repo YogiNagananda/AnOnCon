@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Room, RoomEvent, Track, RemoteTrack, RemoteTrackPublication, RemoteParticipant } from 'livekit-client';
 import { ActiveCallState } from './call-provider';
 import { ReportModal } from '@/components/safety/report-modal';
+import { CallSafetyModal } from '@/components/safety/call-safety-modal';
 import {
   Phone,
   PhoneOff,
@@ -42,6 +43,7 @@ export function CallModal({
   const [duration, setDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showCallSafetyPrompt, setShowCallSafetyPrompt] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [livekitError, setLivekitError] = useState<string | null>(null);
 
@@ -239,7 +241,13 @@ export function CallModal({
             </button>
 
             <button
-              onClick={onAccept}
+              onClick={() => {
+                if (!localStorage.getItem('anon_has_seen_call_safety_tips')) {
+                  setShowCallSafetyPrompt(true);
+                } else {
+                  onAccept();
+                }
+              }}
               className="flex flex-col items-center gap-1.5 group"
             >
               <div className="w-14 h-14 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-lg transition-transform active:scale-95 animate-bounce">
@@ -248,6 +256,16 @@ export function CallModal({
               <span className="text-xs text-slate-400 group-hover:text-emerald-400">Accept</span>
             </button>
           </div>
+          {showCallSafetyPrompt && (
+            <CallSafetyModal
+              forceOpen={showCallSafetyPrompt}
+              onConfirm={() => {
+                setShowCallSafetyPrompt(false);
+                onAccept();
+              }}
+              onCancel={() => setShowCallSafetyPrompt(false)}
+            />
+          )}
         </div>
       </div>
     );

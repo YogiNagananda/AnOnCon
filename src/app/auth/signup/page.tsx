@@ -17,6 +17,7 @@ import { signupSchema } from '@/lib/validations';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { TurnstileWidget } from '@/components/ui/turnstile-widget';
 import { calculateAge } from '@/lib/auth/age-utils';
 
 const MONTHS = [
@@ -54,6 +55,8 @@ export default function SignupPage() {
   const [dobYear, setDobYear] = useState('');
 
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [confirmAdult, setConfirmAdult] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -108,8 +111,13 @@ export default function SignupPage() {
       return;
     }
 
+    if (!confirmAdult) {
+      setErrors({ adult: 'You must confirm that you are at least 18 years old.' });
+      return;
+    }
+
     if (!agreedToTerms) {
-      setErrors({ terms: 'You must agree to the Terms of Service' });
+      setErrors({ terms: 'You must agree to the Terms of Service, Privacy Policy, and Community Guidelines.' });
       return;
     }
 
@@ -119,7 +127,14 @@ export default function SignupPage() {
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, dob: dobStr }),
+        body: JSON.stringify({
+          email,
+          password,
+          dob: dobStr,
+          captchaToken,
+          confirmAdult: true,
+          agreedToTerms: true,
+        }),
       });
 
       const data = await res.json();
@@ -353,9 +368,26 @@ export default function SignupPage() {
           )}
         </div>
 
-        {/* Terms */}
-        <div className="space-y-1.5">
-          <label className="flex items-start gap-2 text-sm text-slate-400">
+        {/* 18+ Confirmation */}
+        <div className="space-y-1">
+          <label className="flex items-start gap-2 text-xs text-slate-300 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={confirmAdult}
+              onChange={(e) => setConfirmAdult(e.target.checked)}
+              disabled={loading}
+              className="mt-0.5 rounded border-slate-700 bg-slate-800 text-indigo-500 focus:ring-indigo-500"
+            />
+            <span>
+              I confirm that I am at least <strong>18 years of age</strong>.
+            </span>
+          </label>
+          {errors.adult && <p className="text-xs text-red-400">{errors.adult}</p>}
+        </div>
+
+        {/* Terms, Privacy & Community Guidelines */}
+        <div className="space-y-1">
+          <label className="flex items-start gap-2 text-xs text-slate-400 cursor-pointer">
             <input
               type="checkbox"
               checked={agreedToTerms}
@@ -365,27 +397,25 @@ export default function SignupPage() {
             />
             <span>
               I agree to the{' '}
-              <a
-                href="/terms"
-                className="text-indigo-400 hover:underline"
-                target="_blank"
-              >
+              <a href="/terms" className="text-indigo-400 hover:underline" target="_blank" rel="noopener noreferrer">
                 Terms of Service
-              </a>{' '}
-              and{' '}
-              <a
-                href="/privacy"
-                className="text-indigo-400 hover:underline"
-                target="_blank"
-              >
+              </a>
+              ,{' '}
+              <a href="/privacy" className="text-indigo-400 hover:underline" target="_blank" rel="noopener noreferrer">
                 Privacy Policy
               </a>
+              , and{' '}
+              <a href="/guidelines" className="text-indigo-400 hover:underline" target="_blank" rel="noopener noreferrer">
+                Community Guidelines
+              </a>
+              .
             </span>
           </label>
-          {errors.terms && (
-            <p className="text-xs text-red-400">{errors.terms}</p>
-          )}
+          {errors.terms && <p className="text-xs text-red-400">{errors.terms}</p>}
         </div>
+
+        {/* Cloudflare Turnstile CAPTCHA */}
+        <TurnstileWidget onVerify={(token) => setCaptchaToken(token)} />
 
         <Button
           type="submit"

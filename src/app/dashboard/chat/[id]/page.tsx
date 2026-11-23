@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { BlockModal } from '@/components/safety/block-modal';
 import { ReportModal } from '@/components/safety/report-modal';
+import { ChatSafetyModal } from '@/components/safety/chat-safety-modal';
 import { useCall } from '@/components/calls/call-provider';
 import {
   ArrowLeft,
@@ -436,6 +437,7 @@ export default function ChatDetailPage() {
       </form>
 
       {/* Safety Modals */}
+      <ChatSafetyModal />
       {otherUser && (
         <>
           <BlockModal

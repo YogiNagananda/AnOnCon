@@ -20,6 +20,7 @@ import { loginSchema } from '@/lib/validations';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { TurnstileWidget } from '@/components/ui/turnstile-widget';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -180,6 +181,9 @@ export default function LoginPage() {
             <p className="text-xs text-red-400">{errors.password}</p>
           )}
         </div>
+
+        {/* Cloudflare Turnstile CAPTCHA */}
+        <TurnstileWidget onVerify={() => {}} />
 
         <Button type="submit" className="w-full" disabled={loading}>
           {loading ? (

@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Search, MessageCircle, User, Settings, Bell, LogOut, Users, Compass } from 'lucide-react';
+import { Home, Search, MessageCircle, User, Settings, Bell, LogOut, Users, Compass, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useEffect, useState, Suspense } from 'react';
 import type { Profile } from '@/lib/supabase/types';
@@ -109,6 +109,17 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             );
           })}
           <Link
+            href="/dashboard/safety"
+            className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors
+              ${pathname === '/dashboard/safety'
+                ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/10'
+                : 'text-[var(--color-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg)]'
+              }`}
+          >
+            <ShieldCheck className="h-5 w-5 text-emerald-400" />
+            Safety Center
+          </Link>
+          <Link
             href="/settings"
             className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors
               ${pathname === '/settings'
@@ -119,6 +130,15 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             <Settings className="h-5 w-5" />
             Settings
           </Link>
+          {profile?.role === 'admin' && (
+            <Link
+              href="/admin"
+              className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors border-t border-slate-800 mt-2"
+            >
+              <ShieldAlert className="h-5 w-5 text-red-400" />
+              Admin Console
+            </Link>
+          )}
         </nav>
 
         <div className="p-4 border-t border-[var(--color-border)]">

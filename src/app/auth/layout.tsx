@@ -36,10 +36,18 @@ export default function AuthLayout({
           By using Anon Connect you agree to our{' '}
           <a href="/terms" className="text-indigo-400 hover:underline">
             Terms of Service
-          </a>{' '}
-          and{' '}
+          </a>
+          ,{' '}
           <a href="/privacy" className="text-indigo-400 hover:underline">
             Privacy Policy
+          </a>
+          , and{' '}
+          <a href="/guidelines" className="text-indigo-400 hover:underline">
+            Community Guidelines
+          </a>
+          . Visit our{' '}
+          <a href="/safety" className="text-emerald-400 hover:underline font-medium">
+            Safety Center
           </a>
           .
         </p>

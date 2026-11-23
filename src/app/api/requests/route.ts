@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { checkRateLimit } from '@/lib/security/rateLimit';
+import { sanitizeInput } from '@/lib/security/sanitize';
 
 
 
@@ -44,8 +46,18 @@ export async function POST(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    // Rate limiting: max 20 requests per hour
+    const limitCheck = checkRateLimit(user.id, 'requests');
+    if (!limitCheck.success) {
+      return NextResponse.json(
+        { error: `Too many connection requests. Please wait ${limitCheck.resetSeconds}s before sending another.` },
+        { status: 429, headers: { 'Retry-After': String(limitCheck.resetSeconds) } }
+      );
+    }
+
     const body = await request.json();
     const { receiver_id, intro } = body;
+    const cleanIntro = intro ? sanitizeInput(intro, 500) : null;
 
     if (!receiver_id) {
       return NextResponse.json({ error: 'Receiver ID is required' }, { status: 400 });
@@ -117,7 +129,7 @@ export async function POST(request: NextRequest) {
       .insert({
         sender_id: user.id,
         receiver_id,
-        intro: intro ? intro.trim() : null,
+        intro: cleanIntro,
         status: 'pending',
         expires_at: expiresAt,
       })
