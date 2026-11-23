@@ -1,5 +1,5 @@
 -- ============================================================
--- PHASE 3: Groups + Calls Migration
+-- PHASE 3: Groups + Calls Migration (Non-Recursive RLS)
 -- Run this in Supabase SQL Editor:
 -- https://supabase.com/dashboard/project/erlixvpvdjxnwtuzmhak/sql
 -- ============================================================
@@ -19,7 +19,6 @@ CREATE TABLE IF NOT EXISTS groups (
   updated_at  timestamptz NOT NULL DEFAULT now()
 );
 
--- Ensure all columns exist even if table was created in an earlier migration
 ALTER TABLE groups ADD COLUMN IF NOT EXISTS max_members int NOT NULL DEFAULT 200;
 ALTER TABLE groups ADD COLUMN IF NOT EXISTS tags text[] DEFAULT '{}';
 ALTER TABLE groups ADD COLUMN IF NOT EXISTS is_public boolean NOT NULL DEFAULT true;
@@ -42,7 +41,6 @@ CREATE TABLE IF NOT EXISTS group_members (
   UNIQUE(group_id, user_id)
 );
 
--- Add status and is_muted columns if they didn't exist in early schema
 ALTER TABLE group_members ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'active';
 ALTER TABLE group_members ADD COLUMN IF NOT EXISTS is_muted boolean NOT NULL DEFAULT false;
 
@@ -107,31 +105,35 @@ CREATE TABLE IF NOT EXISTS group_invites (
 
 CREATE INDEX IF NOT EXISTS idx_group_invites_token ON group_invites(token);
 
--- ─── UPDATED_AT TRIGGERS ──────────────────────────────────────
+-- ─── SECURITY DEFINER HELPERS (PREVENT RLS INFINITE RECURSION) ───
 
-CREATE OR REPLACE FUNCTION update_updated_at()
-RETURNS TRIGGER LANGUAGE plpgsql AS $$
-BEGIN NEW.updated_at = now(); RETURN NEW; END;
+CREATE OR REPLACE FUNCTION public.is_group_member(_group_id uuid, _user_id uuid)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM group_members
+    WHERE group_id = _group_id AND user_id = _user_id AND status = 'active'
+  );
 $$;
 
-DO $$ BEGIN
-  CREATE TRIGGER trg_groups_updated_at BEFORE UPDATE ON groups FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-  EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
-DO $$ BEGIN
-  CREATE TRIGGER trg_group_members_updated_at BEFORE UPDATE ON group_members FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-  EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
-DO $$ BEGIN
-  CREATE TRIGGER trg_group_messages_updated_at BEFORE UPDATE ON group_messages FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-  EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
-DO $$ BEGIN
-  CREATE TRIGGER trg_calls_updated_at BEFORE UPDATE ON calls FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-  EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
+CREATE OR REPLACE FUNCTION public.is_group_admin(_group_id uuid, _user_id uuid)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM group_members
+    WHERE group_id = _group_id AND user_id = _user_id AND role IN ('owner','admin') AND status = 'active'
+  );
+$$;
 
--- ─── RLS ──────────────────────────────────────────────────────
+-- ─── RLS POLICIES ─────────────────────────────────────────────
 
 ALTER TABLE groups         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE group_members  ENABLE ROW LEVEL SECURITY;
@@ -139,51 +141,54 @@ ALTER TABLE group_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE calls          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE group_invites  ENABLE ROW LEVEL SECURITY;
 
--- Clean existing policies so this script can be re-run safely
+-- groups policies
 DROP POLICY IF EXISTS "groups_select" ON groups;
 DROP POLICY IF EXISTS "groups_insert" ON groups;
 DROP POLICY IF EXISTS "groups_update" ON groups;
 DROP POLICY IF EXISTS "groups_delete" ON groups;
 
 CREATE POLICY "groups_select" ON groups FOR SELECT TO authenticated
-  USING (is_public = true OR owner_id = auth.uid() OR
-         EXISTS (SELECT 1 FROM group_members gm WHERE gm.group_id = id AND gm.user_id = auth.uid() AND gm.status = 'active'));
+  USING (is_public = true OR owner_id = auth.uid() OR public.is_group_member(id, auth.uid()));
 
 CREATE POLICY "groups_insert" ON groups FOR INSERT TO authenticated
   WITH CHECK (owner_id = auth.uid());
 
 CREATE POLICY "groups_update" ON groups FOR UPDATE TO authenticated
-  USING (owner_id = auth.uid() OR
-         EXISTS (SELECT 1 FROM group_members gm WHERE gm.group_id = id AND gm.user_id = auth.uid() AND gm.role IN ('owner','admin') AND gm.status = 'active'));
+  USING (owner_id = auth.uid() OR public.is_group_admin(id, auth.uid()));
 
 CREATE POLICY "groups_delete" ON groups FOR DELETE TO authenticated
   USING (owner_id = auth.uid());
 
--- group_members policies
+-- group_members policies (No subqueries against group_members directly!)
 DROP POLICY IF EXISTS "gm_select" ON group_members;
 DROP POLICY IF EXISTS "gm_insert" ON group_members;
 DROP POLICY IF EXISTS "gm_update" ON group_members;
 DROP POLICY IF EXISTS "gm_delete" ON group_members;
 
 CREATE POLICY "gm_select" ON group_members FOR SELECT TO authenticated
-  USING (user_id = auth.uid() OR
-         EXISTS (SELECT 1 FROM group_members gm2 WHERE gm2.group_id = group_id AND gm2.user_id = auth.uid() AND gm2.status = 'active'));
+  USING (
+    user_id = auth.uid() OR
+    public.is_group_member(group_id, auth.uid()) OR
+    EXISTS (SELECT 1 FROM groups g WHERE g.id = group_id AND g.is_public = true)
+  );
 
 CREATE POLICY "gm_insert" ON group_members FOR INSERT TO authenticated
   WITH CHECK (
     user_id = auth.uid() OR
-    EXISTS (SELECT 1 FROM group_members gm WHERE gm.group_id = group_id AND gm.user_id = auth.uid() AND gm.role IN ('owner','admin') AND gm.status = 'active')
+    public.is_group_admin(group_id, auth.uid())
   );
 
 CREATE POLICY "gm_update" ON group_members FOR UPDATE TO authenticated
   USING (
-    EXISTS (SELECT 1 FROM group_members gm WHERE gm.group_id = group_id AND gm.user_id = auth.uid() AND gm.role IN ('owner','admin') AND gm.status = 'active')
-    OR user_id = auth.uid()
+    user_id = auth.uid() OR
+    public.is_group_admin(group_id, auth.uid())
   );
 
 CREATE POLICY "gm_delete" ON group_members FOR DELETE TO authenticated
-  USING (user_id = auth.uid() OR
-         EXISTS (SELECT 1 FROM group_members gm WHERE gm.group_id = group_id AND gm.user_id = auth.uid() AND gm.role IN ('owner','admin') AND gm.status = 'active'));
+  USING (
+    user_id = auth.uid() OR
+    public.is_group_admin(group_id, auth.uid())
+  );
 
 -- group_messages policies
 DROP POLICY IF EXISTS "gmsg_select" ON group_messages;
@@ -191,19 +196,13 @@ DROP POLICY IF EXISTS "gmsg_insert" ON group_messages;
 DROP POLICY IF EXISTS "gmsg_update" ON group_messages;
 
 CREATE POLICY "gmsg_select" ON group_messages FOR SELECT TO authenticated
-  USING (
-    EXISTS (SELECT 1 FROM group_members gm WHERE gm.group_id = group_id AND gm.user_id = auth.uid() AND gm.status = 'active')
-  );
+  USING (public.is_group_member(group_id, auth.uid()));
 
 CREATE POLICY "gmsg_insert" ON group_messages FOR INSERT TO authenticated
-  WITH CHECK (
-    sender_id = auth.uid() AND
-    EXISTS (SELECT 1 FROM group_members gm WHERE gm.group_id = group_id AND gm.user_id = auth.uid() AND gm.status = 'active' AND gm.is_muted = false)
-  );
+  WITH CHECK (sender_id = auth.uid() AND public.is_group_member(group_id, auth.uid()));
 
 CREATE POLICY "gmsg_update" ON group_messages FOR UPDATE TO authenticated
-  USING (sender_id = auth.uid() OR
-         EXISTS (SELECT 1 FROM group_members gm WHERE gm.group_id = group_id AND gm.user_id = auth.uid() AND gm.role IN ('owner','admin') AND gm.status = 'active'));
+  USING (sender_id = auth.uid() OR public.is_group_admin(group_id, auth.uid()));
 
 -- calls policies
 DROP POLICY IF EXISTS "calls_select" ON calls;
@@ -225,7 +224,7 @@ DROP POLICY IF EXISTS "invites_insert" ON group_invites;
 
 CREATE POLICY "invites_select" ON group_invites FOR SELECT TO authenticated USING (true);
 CREATE POLICY "invites_insert" ON group_invites FOR INSERT TO authenticated
-  WITH CHECK (EXISTS (SELECT 1 FROM group_members gm WHERE gm.group_id = group_id AND gm.user_id = auth.uid() AND gm.role IN ('owner','admin') AND gm.status = 'active'));
+  WITH CHECK (public.is_group_admin(group_id, auth.uid()));
 
 -- ─── REALTIME ─────────────────────────────────────────────────
 

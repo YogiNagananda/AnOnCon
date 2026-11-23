@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 
 // GET /api/groups?search=&tag=&page=
 export async function GET(request: NextRequest) {
@@ -71,7 +71,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Name must be 2–60 characters' }, { status: 400 });
     }
 
-    const { data: group, error: gErr } = await supabase
+    const adminSupabase = await createAdminClient();
+
+    const { data: group, error: gErr } = await adminSupabase
       .from('groups')
       .insert({
         name: name.trim(),
@@ -87,7 +89,7 @@ export async function POST(request: NextRequest) {
     if (gErr) throw gErr;
 
     // Insert owner as member
-    const { error: mErr } = await supabase.from('group_members').insert({
+    const { error: mErr } = await adminSupabase.from('group_members').insert({
       group_id: group.id,
       user_id: user.id,
       role: 'owner',
