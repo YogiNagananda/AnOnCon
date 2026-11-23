@@ -43,7 +43,8 @@ function normalizeText(text: string): string {
     .replace(/[0]/g, 'o')
     .replace(/[1!|]/g, 'i')
     .replace(/[3]/g, 'e')
-    .replace(/[+]/g, 't');
+    .replace(/[+]/g, 't')
+    .replace(/[._\-]/g, '');
 }
 
 /**

@@ -46,7 +46,11 @@ export async function POST(request: NextRequest) {
       result.error.issues.forEach((issue) => {
         errors[issue.path[0] as string] = issue.message;
       });
-      return NextResponse.json({ error: 'Validation failed', errors }, { status: 400 });
+      const isUnderage = errors.dob?.includes('18');
+      return NextResponse.json(
+        { error: isUnderage ? 'You must be 18 or older to register.' : 'Validation failed', errors },
+        { status: isUnderage ? 403 : 400 }
+      );
     }
 
     const { email, password, dob } = result.data;
@@ -54,9 +58,10 @@ export async function POST(request: NextRequest) {
     // 4. Hard server-side 18+ age check
     const dobValidation = validateDOB(dob);
     if (!dobValidation.valid) {
+      const isUnderage = dobValidation.error?.includes('18');
       return NextResponse.json(
         { error: dobValidation.error, errors: { dob: dobValidation.error } },
-        { status: 400 }
+        { status: isUnderage ? 403 : 400 }
       );
     }
     if (!isAdult(new Date(dob))) {

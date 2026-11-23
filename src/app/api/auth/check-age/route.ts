@@ -14,10 +14,14 @@ export async function POST(request: NextRequest) {
 
     const validation = validateDOB(dob);
     if (!validation.valid) {
-      return NextResponse.json({ error: validation.error }, { status: 400 });
+      const isUnderage = validation.error?.includes('18');
+      return NextResponse.json(
+        { error: validation.error, isAdult: false },
+        { status: isUnderage ? 403 : 400 }
+      );
     }
     if (!isAdult(new Date(dob))) {
-      return NextResponse.json({ error: 'You must be 18 or older' }, { status: 403 });
+      return NextResponse.json({ error: 'You must be 18 or older', isAdult: false }, { status: 403 });
     }
 
     const supabase = await createClient();
