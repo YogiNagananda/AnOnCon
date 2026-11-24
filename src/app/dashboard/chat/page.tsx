@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { MessageCircle, Search, Clock, ArrowRight, Loader2, Sparkles } from 'lucide-react';
+import { MessageCircle, Search, ArrowRight, Loader2, Radio } from 'lucide-react';
 import Link from 'next/link';
 
 const AVATARS: Record<string, string> = {
@@ -59,43 +59,48 @@ export default function ChatListPage() {
   }, []);
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-3xl mx-auto px-4 py-6 space-y-6 antialiased selection:bg-[var(--color-primary)] selection:text-white">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--color-border)] pb-5">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--color-text)] flex items-center gap-2">
-            <MessageCircle className="h-6 w-6 text-[var(--color-primary)]" />
-            Messages
+          <div className="flex items-center gap-2 font-mono text-xs text-[var(--color-primary)] uppercase tracking-wider mb-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)]" />
+            <span>Encrypted Signal Logs // 1:1 Channels</span>
+          </div>
+          <h1 className="text-xl font-bold tracking-tight text-[var(--color-text)]">
+            Active Messages
           </h1>
-          <p className="text-sm text-[var(--color-muted)]">
-            Your 1:1 conversations with accepted connections.
+          <p className="text-xs text-[var(--color-muted)] mt-0.5">
+            1:1 direct conversations unlocked through confirmed handshake requests.
           </p>
         </div>
 
         <Link href="/dashboard/discover">
-          <Button size="sm" variant="outline">
-            <Search className="h-4 w-4 mr-1.5" /> Find People
+          <Button size="sm" variant="outline" className="font-mono text-xs">
+            <Search className="h-3.5 w-3.5 mr-1.5" /> Tune into Directory
           </Button>
         </Link>
       </div>
 
-      {/* Chat list */}
-      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl overflow-hidden shadow-sm">
+      {/* Chat list card */}
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden shadow-sm">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-[var(--color-primary)] mb-2" />
-            <p className="text-sm text-[var(--color-muted)]">Loading conversations...</p>
+          <div className="flex flex-col items-center justify-center py-16 font-mono text-xs text-[var(--color-muted)]">
+            <Loader2 className="h-5 w-5 animate-spin text-[var(--color-primary)] mb-2" />
+            <p>Decoding channel logs...</p>
           </div>
         ) : chats.length === 0 ? (
           <div className="text-center py-16 px-4">
-            <Sparkles className="h-12 w-12 text-[var(--color-primary)] mx-auto mb-3 opacity-40" />
-            <h3 className="text-base font-semibold text-[var(--color-text)]">No conversations yet</h3>
-            <p className="text-sm text-[var(--color-muted)] max-w-sm mx-auto mt-1 mb-5">
-              1:1 chats unlock after a connection request is accepted. Discover people and send a request with an icebreaker!
+            <Radio className="h-8 w-8 text-[var(--color-muted)] mx-auto mb-3 opacity-40" />
+            <h3 className="text-sm font-semibold text-[var(--color-text)]">
+              No active conversations yet
+            </h3>
+            <p className="text-xs text-[var(--color-muted)] max-w-sm mx-auto mt-1 mb-5 font-mono">
+              Channels unlock once a peer accepts your connection signal. Explore the directory and send an icebreaker.
             </p>
             <Link href="/dashboard/discover">
-              <Button>
-                <Search className="h-4 w-4 mr-1.5" /> Discover People
+              <Button size="sm" className="font-mono text-xs">
+                <Search className="h-3.5 w-3.5 mr-1.5" /> Discover Peers
               </Button>
             </Link>
           </div>
@@ -109,41 +114,63 @@ export default function ChatListPage() {
                 <Link
                   key={chat.id}
                   href={`/dashboard/chat/${chat.id}`}
-                  className="flex items-center justify-between p-4 hover:bg-slate-800/40 transition-colors group"
+                  className="flex items-center justify-between p-4 hover:bg-[var(--color-surface-raised)] transition-colors group"
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
                     {/* Avatar */}
                     <div className="relative shrink-0">
-                      <div className="w-12 h-12 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center text-2xl select-none">
+                      <div className="w-11 h-11 rounded-lg bg-[var(--color-surface-raised)] border border-[var(--color-border)] flex items-center justify-center text-xl select-none">
                         {emoji}
                       </div>
                       {chat.otherUser?.is_online && (
-                        <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-[var(--color-surface)]" />
+                        <span
+                          className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-[var(--color-surface)]"
+                          title="Online"
+                        />
                       )}
                     </div>
 
                     {/* Meta */}
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className={`text-sm truncate ${hasUnread ? 'font-bold text-white' : 'font-medium text-[var(--color-text)]'}`}>
-                          {chat.otherUser?.display_name || 'Anonymous User'}
+                        <p
+                          className={`text-sm truncate ${
+                            hasUnread
+                              ? 'font-bold text-[var(--color-text)]'
+                              : 'font-medium text-[var(--color-text)]'
+                          }`}
+                        >
+                          {chat.otherUser?.display_name || 'Anonymous Peer'}
                         </p>
                         {chat.lastMessage?.created_at && (
-                          <span className="text-[11px] text-[var(--color-muted)] shrink-0">
-                            {new Date(chat.lastMessage.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          <span className="text-[10px] font-mono text-[var(--color-muted)] shrink-0">
+                            {new Date(chat.lastMessage.created_at).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
                           </span>
                         )}
                       </div>
 
-                      <p className={`text-xs truncate mt-0.5 ${hasUnread ? 'text-indigo-200 font-medium' : 'text-[var(--color-muted)]'}`}>
+                      <p
+                        className={`text-xs truncate mt-0.5 ${
+                          hasUnread
+                            ? 'text-[var(--color-primary)] font-medium'
+                            : 'text-[var(--color-muted)]'
+                        }`}
+                      >
                         {chat.lastMessage ? (
                           chat.lastMessage.is_deleted ? (
-                            <span className="italic opacity-60">This message was deleted</span>
+                            <span className="italic opacity-60 font-mono text-[11px]">
+                              Transmission deleted
+                            </span>
                           ) : (
                             chat.lastMessage.content
                           )
                         ) : (
-                          <span className="italic opacity-60">No messages yet. Say hi! 👋</span>
+                          <span className="italic opacity-60 font-mono text-[11px]">
+                            Handshake accepted. Say hello.
+                          </span>
                         )}
                       </p>
                     </div>
@@ -152,11 +179,11 @@ export default function ChatListPage() {
                   {/* Unread badge & Arrow */}
                   <div className="flex items-center gap-2.5 shrink-0 ml-3">
                     {hasUnread && (
-                      <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-[var(--color-primary)] text-white">
+                      <span className="px-1.5 py-0.2 rounded font-mono text-[10px] bg-[var(--color-primary)] text-white font-medium">
                         {chat.unreadCount}
                       </span>
                     )}
-                    <ArrowRight className="h-4 w-4 text-slate-500 group-hover:text-white transition-colors" />
+                    <ArrowRight className="h-4 w-4 text-[var(--color-muted)] group-hover:text-[var(--color-text)] transition-colors" />
                   </div>
                 </Link>
               );
