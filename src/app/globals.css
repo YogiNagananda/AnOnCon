@@ -61,3 +61,14 @@ body {
   font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
   letter-spacing: -0.01em;
 }
+
+/* Topographical radio-wave contour background */
+.bg-topo-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg width='800' height='800' viewBox='0 0 800 800' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23000000' stroke-width='1.2' stroke-opacity='0.045'%3E%3Cpath d='M-100,100 C150,50 250,200 450,150 C650,100 750,250 900,200' /%3E%3Cpath d='M-100,160 C140,110 240,260 450,210 C660,160 740,310 900,260' /%3E%3Cpath d='M-100,220 C130,170 230,320 450,270 C670,220 730,370 900,320' /%3E%3Cpath d='M-100,280 C120,230 220,380 450,330 C680,280 720,430 900,380' /%3E%3Cpath d='M-100,340 C110,290 210,440 450,390 C690,340 710,490 900,440' /%3E%3Cpath d='M-100,400 C100,350 200,500 450,450 C700,400 700,550 900,500' /%3E%3Cpath d='M-100,460 C90,410 190,560 450,510 C710,460 690,610 900,560' /%3E%3Cpath d='M-100,520 C80,470 180,620 450,570 C720,520 680,670 900,620' /%3E%3Cpath d='M-100,580 C70,530 170,680 450,630 C730,580 670,730 900,680' /%3E%3Ccircle cx='620' cy='220' r='60' /%3E%3Ccircle cx='620' cy='220' r='110' /%3E%3Ccircle cx='620' cy='220' r='170' /%3E%3Ccircle cx='620' cy='220' r='240' /%3E%3Ccircle cx='180' cy='560' r='50' /%3E%3Ccircle cx='180' cy='560' r='90' /%3E%3Ccircle cx='180' cy='560' r='140' /%3E%3Ccircle cx='180' cy='560' r='200' /%3E%3C/g%3E%3C/svg%3E");
+  background-size: 800px 800px;
+}
+
+.dark .bg-topo-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg width='800' height='800' viewBox='0 0 800 800' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='1.2' stroke-opacity='0.04'%3E%3Cpath d='M-100,100 C150,50 250,200 450,150 C650,100 750,250 900,200' /%3E%3Cpath d='M-100,160 C140,110 240,260 450,210 C660,160 740,310 900,260' /%3E%3Cpath d='M-100,220 C130,170 230,320 450,270 C670,220 730,370 900,320' /%3E%3Cpath d='M-100,280 C120,230 220,380 450,330 C680,280 720,430 900,380' /%3E%3Cpath d='M-100,340 C110,290 210,440 450,390 C690,340 710,490 900,440' /%3E%3Cpath d='M-100,400 C100,350 200,500 450,450 C700,400 700,550 900,500' /%3E%3Cpath d='M-100,460 C90,410 190,560 450,510 C710,460 690,610 900,560' /%3E%3Cpath d='M-100,520 C80,470 180,620 450,570 C720,520 680,670 900,620' /%3E%3Cpath d='M-100,580 C70,530 170,680 450,630 C730,580 670,730 900,680' /%3E%3Ccircle cx='620' cy='220' r='60' /%3E%3Ccircle cx='620' cy='220' r='110' /%3E%3Ccircle cx='620' cy='220' r='170' /%3E%3Ccircle cx='620' cy='220' r='240' /%3E%3Ccircle cx='180' cy='560' r='50' /%3E%3Ccircle cx='180' cy='560' r='90' /%3E%3Ccircle cx='180' cy='560' r='140' /%3E%3Ccircle cx='180' cy='560' r='200' /%3E%3C/g%3E%3C/svg%3E");
+  background-size: 800px 800px;
+}

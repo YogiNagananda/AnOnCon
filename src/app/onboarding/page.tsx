@@ -263,11 +263,10 @@ function OnboardingContent() {
             {Array.from({ length: totalSteps }).map((_, idx) => (
               <div
                 key={idx}
-                className={`h-1 rounded-sm transition-colors duration-300 ${
-                  idx < displayStep
-                    ? 'bg-[var(--color-primary)]'
-                    : 'bg-[var(--color-surface-raised)] border border-[var(--color-border)]'
-                }`}
+                className={`h-1 rounded-sm transition-colors duration-300 ${idx < displayStep
+                  ? 'bg-[var(--color-primary)]'
+                  : 'bg-[var(--color-surface-raised)] border border-[var(--color-border)]'
+                  }`}
               />
             ))}
           </div>
@@ -433,11 +432,10 @@ function OnboardingContent() {
                       key={avatar.id}
                       type="button"
                       onClick={() => setSelectedAvatar(avatar.id)}
-                      className={`group relative flex flex-col items-center justify-center p-3 rounded-lg border text-left transition-colors duration-150 ${
-                        isSelected
-                          ? 'border-[var(--color-primary)] bg-[var(--color-accent-subtle)] ring-1 ring-[var(--color-primary)]'
-                          : 'border-[var(--color-border)] bg-[var(--color-surface-raised)] hover:border-[var(--color-border)]/80 hover:bg-[var(--color-surface-raised)]/80'
-                      }`}
+                      className={`group relative flex flex-col items-center justify-center p-3 rounded-lg border text-left transition-colors duration-150 ${isSelected
+                        ? 'border-[var(--color-primary)] bg-[var(--color-accent-subtle)] ring-1 ring-[var(--color-primary)]'
+                        : 'border-[var(--color-border)] bg-[var(--color-surface-raised)] hover:border-[var(--color-border)]/80 hover:bg-[var(--color-surface-raised)]/80'
+                        }`}
                     >
                       <span className="text-2xl mb-1 transition-transform group-hover:scale-105">
                         {avatar.glyph}
@@ -527,11 +525,10 @@ function OnboardingContent() {
                                 : [...prev, lang.value]
                             );
                           }}
-                          className={`px-3 py-1.5 rounded-md text-xs font-mono transition-colors duration-150 ${
-                            isSelected
-                              ? 'bg-[var(--color-primary)] text-white font-medium'
-                              : 'bg-[var(--color-surface-raised)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:border-[var(--color-text-secondary)]'
-                          }`}
+                          className={`px-3 py-1.5 rounded-md text-xs font-mono transition-colors duration-150 ${isSelected
+                            ? 'bg-[var(--color-primary)] text-white font-medium'
+                            : 'bg-[var(--color-surface-raised)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:border-[var(--color-text-secondary)]'
+                            }`}
                         >
                           {lang.label}
                         </button>
@@ -571,15 +568,14 @@ function OnboardingContent() {
                           prev.includes(interest)
                             ? prev.filter((i) => i !== interest)
                             : prev.length < 10
-                            ? [...prev, interest]
-                            : prev
+                              ? [...prev, interest]
+                              : prev
                         );
                       }}
-                      className={`px-3 py-1.5 rounded-md text-xs font-mono transition-colors duration-150 ${
-                        isSelected
-                          ? 'bg-[var(--color-primary)] text-white font-medium'
-                          : 'bg-[var(--color-surface-raised)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:border-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
-                      }`}
+                      className={`px-3 py-1.5 rounded-md text-xs font-mono transition-colors duration-150 ${isSelected
+                        ? 'bg-[var(--color-primary)] text-white font-medium'
+                        : 'bg-[var(--color-surface-raised)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:border-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
+                        }`}
                     >
                       {interest}
                     </button>

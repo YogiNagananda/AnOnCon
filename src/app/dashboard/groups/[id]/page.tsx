@@ -26,6 +26,9 @@ import {
   VolumeX,
   Volume2,
   ChevronRight,
+  Radio,
+  SlidersHorizontal,
+  Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -87,7 +90,7 @@ export default function GroupChatPage() {
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
-  const [showMembers, setShowMembers] = useState(false);
+  const [showMembers, setShowMembers] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [pendingAction, setPendingAction] = useState<{
     memberId: string;
@@ -158,40 +161,18 @@ export default function GroupChatPage() {
 
   // Realtime subscription
   useEffect(() => {
-    if (!groupId) return;
-    const channel = supabase.channel(`group_${groupId}`);
-    channel
+    const channel = supabase
+      .channel(`group_${groupId}`)
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'group_messages',
           filter: `group_id=eq.${groupId}`,
         },
-        (payload) => {
-          const msg = payload.new as GroupMessage;
-          setMessages((prev) => {
-            if (prev.some((m) => m.id === msg.id)) return prev;
-            return [...prev, { ...msg, sender: null }];
-          });
-          setTimeout(scrollToBottom, 50);
+        () => {
           loadMessages();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'group_messages',
-          filter: `group_id=eq.${groupId}`,
-        },
-        (payload) => {
-          const updated = payload.new as GroupMessage;
-          setMessages((prev) =>
-            prev.map((m) => (m.id === updated.id ? { ...m, ...updated } : m))
-          );
         }
       )
       .on(
@@ -211,7 +192,7 @@ export default function GroupChatPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [groupId, supabase]);
+  }, [groupId, supabase, loadMessages, loadMembers, loadGroup]);
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
@@ -328,378 +309,393 @@ export default function GroupChatPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto flex flex-col h-[calc(100vh-4rem)] md:h-[calc(100vh-2rem)] my-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden shadow-sm antialiased selection:bg-[var(--color-primary)] selection:text-white">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-surface-raised)]">
-        <div className="flex items-center gap-3 min-w-0">
-          <button
-            type="button"
-            onClick={() => router.push('/dashboard/groups')}
-            className="p-1 rounded text-[var(--color-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-colors"
-            aria-label="Back to groups"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-          <div className="w-9 h-9 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-xl shrink-0 select-none">
-            {group.icon_url || '💬'}
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <h2 className="text-sm font-semibold text-[var(--color-text)] truncate">
-                {group.name}
-              </h2>
-              {group.is_public ? (
-                <span title="Public Hub">
-                  <Globe className="h-3 w-3 text-emerald-500 shrink-0" />
-                </span>
-              ) : (
-                <span title="Private Hub">
-                  <Lock className="h-3 w-3 text-amber-500 shrink-0" />
-                </span>
-              )}
-            </div>
-            <p className="text-[11px] font-mono text-[var(--color-muted)]">
-              [{memberCount} active members]
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setShowMembers(!showMembers)}
-            className="p-1.5 rounded text-[var(--color-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-colors"
-            title="Toggle Roster"
-            aria-label="Members"
-          >
-            <Users className="h-4 w-4" />
-          </button>
-          {isAdmin && (
+    <div className="flex h-[calc(100vh-4rem)] md:h-screen w-full overflow-hidden select-none bg-[var(--color-bg)] antialiased selection:bg-[var(--color-primary)] selection:text-white">
+      {/* Center Group Stream */}
+      <div className="flex-1 flex flex-col h-full min-w-0 bg-[var(--color-bg)] bg-topo-pattern relative">
+        {/* Squad Header */}
+        <header className="px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-surface)]/90 backdrop-blur-md flex items-center justify-between shrink-0 z-10">
+          <div className="flex items-center gap-3 min-w-0">
             <button
               type="button"
-              onClick={() => setShowSettings(true)}
-              className="p-1.5 rounded text-[var(--color-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-colors"
-              title="Hub Config"
-              aria-label="Settings"
+              onClick={() => router.push('/dashboard/groups')}
+              className="p-1.5 rounded-lg text-[var(--color-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-raised)] transition-colors"
+              aria-label="Back to groups"
             >
-              <Settings className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4" />
             </button>
-          )}
-        </div>
-      </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Messages Stream */}
-        <div className="flex flex-col flex-1 overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {/* Safety banner */}
-            <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-mono flex items-center gap-2 justify-center text-center">
-              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-              <span>Campus collective rules apply. Never share private contacts or money.</span>
+            <div className="w-10 h-10 rounded-xl bg-[var(--color-surface-raised)] border border-[var(--color-border)] flex items-center justify-center text-xl shrink-0 shadow-xs">
+              {group.icon_url || '💬'}
             </div>
 
-            {messages.length === 0 ? (
-              <div className="text-center py-16 text-[var(--color-muted)] font-mono">
-                <p className="text-xs uppercase tracking-wider">
-                  Squad frequency established. Transmit the first message.
-                </p>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <h2 className="text-sm font-bold text-[var(--color-text)] truncate">
+                  {group.name}
+                </h2>
+                {group.is_public ? (
+                  <span title="Public Collective">
+                    <Globe className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                  </span>
+                ) : (
+                  <span title="Private Squad">
+                    <Lock className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                  </span>
+                )}
               </div>
-            ) : (
-              messages.map((m) => {
-                const isMe = m.sender_id === currentUserId;
-                const isBlocked = blockedIds.has(m.sender_id);
-                if (isBlocked && !isMe) return null;
+              <p className="text-[11px] font-mono text-[var(--color-muted)]">
+                {memberCount} active members // squad channel
+              </p>
+            </div>
+          </div>
 
-                const senderName = m.sender?.display_name ?? 'Anonymous';
-                const avatarEmoji = AVATARS[m.sender?.avatar_url ?? ''] ?? '👤';
-                const timeStr = new Date(m.created_at).toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                });
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setShowMembers(!showMembers)}
+              className={`p-2 rounded-lg transition-colors ${
+                showMembers
+                  ? 'text-[var(--color-primary)] bg-[var(--color-surface-raised)]'
+                  : 'text-[var(--color-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-raised)]'
+              }`}
+              title="Toggle Squad Roster"
+              aria-label="Members"
+            >
+              <Users className="h-4 w-4" />
+            </button>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => setShowSettings(true)}
+                className="p-2 rounded-lg text-[var(--color-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-raised)] transition-colors"
+                title="Hub Config"
+                aria-label="Settings"
+              >
+                <Settings className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        </header>
 
-                return (
-                  <div
-                    key={m.id}
-                    className={`flex gap-2.5 group ${isMe ? 'flex-row-reverse' : ''}`}
-                  >
-                    <div className="w-7 h-7 rounded bg-[var(--color-surface-raised)] border border-[var(--color-border)] flex items-center justify-center text-xs shrink-0 mt-0.5 select-none">
+        {/* Messages Stream */}
+        <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
+          {/* Safety Banner */}
+          <div className="max-w-md mx-auto p-2 rounded-lg bg-[var(--color-surface)]/80 backdrop-blur-xs border border-[var(--color-border)] text-xs font-mono text-[var(--color-muted)] flex items-center gap-2 justify-center text-center shadow-xs">
+            <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+            <span>Campus collective rules apply. Never share private contacts or money.</span>
+          </div>
+
+          {messages.length === 0 ? (
+            <div className="text-center py-16 text-[var(--color-muted)] font-mono">
+              <p className="text-xs uppercase tracking-wider">
+                Squad frequency established. Transmit the first message.
+              </p>
+            </div>
+          ) : (
+            messages.map((m) => {
+              const isMe = m.sender_id === currentUserId;
+              const isBlocked = blockedIds.has(m.sender_id);
+              if (isBlocked && !isMe) return null;
+
+              const senderName = m.sender?.display_name ?? 'Anonymous';
+              const avatarEmoji = AVATARS[m.sender?.avatar_url ?? ''] ?? '👤';
+              const timeStr = new Date(m.created_at).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              });
+
+              return (
+                <div
+                  key={m.id}
+                  className={`flex items-end gap-2.5 ${isMe ? 'justify-end' : 'justify-start'} group`}
+                >
+                  {!isMe && (
+                    <div className="w-8 h-8 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-sm shrink-0 mb-1 shadow-xs">
                       {avatarEmoji}
                     </div>
+                  )}
+
+                  <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[75%]`}>
+                    {!isMe && (
+                      <span className="text-[10px] font-mono text-[var(--color-muted)] mb-1 ml-1">
+                        {senderName} • {timeStr}
+                      </span>
+                    )}
 
                     <div
-                      className={`max-w-[78%] space-y-0.5 ${
-                        isMe ? 'items-end' : 'items-start'
-                      } flex flex-col`}
+                      className={`rounded-2xl px-4 py-2.5 text-xs shadow-xs relative transition-all ${
+                        isMe
+                          ? 'bg-[var(--color-primary)] text-white dark:bg-white dark:text-black rounded-br-sm'
+                          : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text)] rounded-bl-sm'
+                      }`}
                     >
-                      {!isMe && (
-                        <span className="text-[10px] font-mono text-[var(--color-muted)] px-1">
-                          [ {senderName} ]
+                      {m.is_deleted ? (
+                        <span className="italic opacity-70 text-xs font-mono">
+                          Transmission deleted
                         </span>
+                      ) : (
+                        <p className="whitespace-pre-wrap break-words leading-relaxed font-sans">
+                          {m.content}
+                        </p>
                       )}
 
                       <div
-                        className={`relative rounded-lg px-3.5 py-2 text-sm shadow-none ${
-                          isMe
-                            ? 'bg-[var(--color-primary)] text-white rounded-tr-none'
-                            : 'bg-[var(--color-surface-raised)] border border-[var(--color-border)] text-[var(--color-text)] rounded-tl-none'
+                        className={`flex items-center gap-1 mt-1 justify-end text-[10px] font-mono ${
+                          isMe ? 'text-white/80' : 'text-[var(--color-muted)]'
                         }`}
                       >
-                        {m.is_deleted ? (
-                          <span className="italic opacity-60 text-xs font-mono">
-                            Transmission deleted
-                          </span>
-                        ) : (
-                          <p className="whitespace-pre-wrap break-words leading-relaxed">
-                            {m.content}
-                          </p>
+                        <span>{timeStr}</span>
+                        {!m.is_deleted && (isMe || isAdmin) && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteMessage(m.id)}
+                            className="opacity-0 group-hover:opacity-100 hover:text-red-300 ml-1 transition-opacity"
+                            title="Delete message"
+                            aria-label="Delete"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
                         )}
-
-                        <div
-                          className={`flex items-center gap-2 mt-1 text-[10px] font-mono ${
-                            isMe ? 'text-white/80 justify-end' : 'text-[var(--color-muted)]'
-                          }`}
-                        >
-                          <span>{timeStr}</span>
-                          {!m.is_deleted && (isMe || isAdmin) && (
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteMessage(m.id)}
-                              className="opacity-0 group-hover:opacity-100 hover:text-red-300 transition-opacity"
-                              title="Delete message"
-                              aria-label="Delete"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </button>
-                          )}
-                          {!isMe && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setReportTarget({ id: m.sender_id, name: senderName })
-                              }
-                              className="opacity-0 group-hover:opacity-100 hover:text-amber-400 transition-opacity"
-                              title="Report peer"
-                              aria-label="Report"
-                            >
-                              <Flag className="h-3 w-3" />
-                            </button>
-                          )}
-                        </div>
+                        {!isMe && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setReportTarget({ id: m.sender_id, name: senderName })
+                            }
+                            className="opacity-0 group-hover:opacity-100 hover:text-amber-400 ml-1 transition-opacity"
+                            title="Report peer"
+                            aria-label="Report"
+                          >
+                            <Flag className="h-3 w-3" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
-                );
-              })
-            )}
-            <div ref={messagesEndRef} />
-          </div>
+                </div>
+              );
+            })
+          )}
+          <div ref={messagesEndRef} />
+        </div>
 
-          {/* Input Bar */}
+        {/* Floating Bottom Input Bar */}
+        <div className="p-4 bg-gradient-to-t from-[var(--color-bg)] via-[var(--color-bg)]/80 to-transparent">
           {membership.is_muted ? (
-            <div className="p-3 border-t border-[var(--color-border)] bg-[var(--color-surface-raised)] text-center text-xs font-mono text-amber-500 flex items-center justify-center gap-2">
-              <VolumeX className="h-3.5 w-3.5" /> Muted by moderator clearance. Message privileges suspended.
+            <div className="max-w-2xl mx-auto p-3 rounded-full bg-[var(--color-surface)] border border-amber-500/20 text-center text-xs font-mono text-amber-500 flex items-center justify-center gap-2 shadow-sm">
+              <VolumeX className="h-4 w-4" /> Broadcast permissions muted by moderator clearance.
             </div>
           ) : (
             <form
               onSubmit={handleSend}
-              className="p-3 border-t border-[var(--color-border)] bg-[var(--color-surface-raised)] flex items-center gap-2"
+              className="max-w-2xl mx-auto flex items-center gap-2 p-1.5 pl-4 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] shadow-md"
             >
-              <Input
+              <input
+                type="text"
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                placeholder="Broadcast to hub..."
-                className="flex-1 bg-[var(--color-bg)] font-mono text-xs"
+                placeholder="Broadcast to collective..."
+                className="flex-1 bg-transparent border-0 text-xs font-mono focus:outline-none placeholder:text-[var(--color-muted)] text-[var(--color-text)]"
                 disabled={sending}
               />
-              <Button
+
+              <button
                 type="submit"
-                size="sm"
                 disabled={!text.trim() || sending}
-                className="font-mono text-xs px-3.5 shrink-0"
+                className="w-8 h-8 rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center disabled:opacity-30 hover:scale-105 active:scale-95 transition-transform shrink-0 shadow-xs"
+                title="Send broadcast"
               >
                 {sending ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
                   <Send className="h-3.5 w-3.5" />
                 )}
-              </Button>
+              </button>
             </form>
           )}
         </div>
+      </div>
 
-        {/* Members Sidebar */}
-        {showMembers && (
-          <div className="w-64 border-l border-[var(--color-border)] bg-[var(--color-surface-raised)] flex flex-col font-mono">
-            <div className="flex items-center justify-between px-3 py-2.5 border-b border-[var(--color-border)]">
-              <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">
-                Roster ({memberCount})
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowMembers(false)}
-                className="text-[var(--color-muted)] hover:text-[var(--color-text)]"
-                aria-label="Close roster"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
+      {/* Right Drawer: Squad Roster (Matching Image 2) */}
+      {showMembers && (
+        <aside className="hidden lg:flex flex-col w-80 border-l border-[var(--color-border)] bg-[var(--color-surface)] h-full overflow-y-auto shrink-0 select-none">
+          <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between">
+            <span className="font-mono text-xs uppercase tracking-wider text-[var(--color-muted)] font-semibold">
+              Squad Roster ({memberCount})
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowMembers(false)}
+              className="p-1 rounded-md text-[var(--color-muted)] hover:text-[var(--color-text)]"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Group Dossier Header */}
+          <div className="p-5 text-center border-b border-[var(--color-border)]">
+            <div className="w-16 h-16 rounded-2xl bg-[var(--color-surface-raised)] border border-[var(--color-border)] flex items-center justify-center text-3xl mx-auto shadow-xs mb-2">
+              {group.icon_url || '💬'}
             </div>
+            <h3 className="text-sm font-bold text-[var(--color-text)]">
+              {group.name}
+            </h3>
+            {group.description && (
+              <p className="text-xs text-[var(--color-muted)] mt-1 font-sans leading-relaxed">
+                {group.description}
+              </p>
+            )}
 
-            {/* Invite link (admin/owner) */}
+            {/* Invite Token Action */}
             {!group.is_public && isAdmin && (
-              <div className="p-2 border-b border-[var(--color-border)]">
+              <div className="mt-3 pt-3 border-t border-[var(--color-border)]">
                 {inviteUrl ? (
                   <div className="flex gap-1">
                     <input
                       readOnly
                       value={inviteUrl}
-                      className="flex-1 text-[10px] bg-[var(--color-bg)] border border-[var(--color-border)] rounded px-2 py-1 text-[var(--color-muted)] truncate"
+                      className="flex-1 text-[10px] font-mono bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-md px-2 py-1 text-[var(--color-muted)] truncate"
                     />
                     <button
                       type="button"
                       onClick={copyInvite}
-                      className="p-1 rounded text-[var(--color-muted)] hover:text-[var(--color-text)]"
-                      aria-label="Copy invite"
+                      className="p-1.5 rounded-md bg-[var(--color-surface-raised)] border border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-text)]"
+                      title="Copy invite"
                     >
-                      {copied ? (
-                        <Check className="h-3.5 w-3.5 text-emerald-500" />
-                      ) : (
-                        <Copy className="h-3.5 w-3.5" />
-                      )}
+                      {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
                     </button>
                   </div>
                 ) : (
-                  <button
-                    type="button"
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={generateInvite}
-                    className="w-full text-xs py-1.5 rounded bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)] transition-colors"
+                    className="w-full rounded-full font-mono text-xs"
                   >
-                    Generate Invite Token
-                  </button>
+                    Generate Invite Link
+                  </Button>
                 )}
               </div>
             )}
+          </div>
 
-            <div className="flex-1 overflow-y-auto p-2 space-y-1">
-              {members
-                .filter((m) => m.status === 'active')
-                .map((m) => {
-                  const avatarEmoji = AVATARS[m.profile?.avatar_url ?? ''] ?? '👤';
-                  const isMe = m.user_id === currentUserId;
-                  const canModerate =
-                    isAdmin && !isMe && m.role !== 'owner' && (m.role !== 'admin' || isOwner);
+          {/* Members List */}
+          <div className="flex-1 overflow-y-auto p-3 space-y-1 font-mono">
+            {members
+              .filter((m) => m.status === 'active')
+              .map((m) => {
+                const avatarEmoji = AVATARS[m.profile?.avatar_url ?? ''] ?? '👤';
+                const isMe = m.user_id === currentUserId;
+                const canModerate =
+                  isAdmin && !isMe && m.role !== 'owner' && (m.role !== 'admin' || isOwner);
 
-                  return (
-                    <div
-                      key={m.id}
-                      className="flex items-center gap-2 p-1.5 rounded hover:bg-[var(--color-surface)] group/member transition-colors"
-                    >
-                      <div className="relative shrink-0">
-                        <div className="w-6 h-6 rounded bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-xs">
-                          {avatarEmoji}
-                        </div>
-                        {m.profile?.is_online && (
-                          <span className="absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                        )}
+                return (
+                  <div
+                    key={m.id}
+                    className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-[var(--color-surface-raised)] group/member transition-colors"
+                  >
+                    <div className="relative shrink-0">
+                      <div className="w-8 h-8 rounded-lg bg-[var(--color-surface-raised)] border border-[var(--color-border)] flex items-center justify-center text-sm shadow-xs">
+                        {avatarEmoji}
                       </div>
-
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-[var(--color-text)] truncate font-sans">
-                          {m.profile?.display_name ?? 'Anonymous'}
-                        </p>
-                        <p
-                          className={`text-[9px] uppercase tracking-wider ${
-                            m.role === 'owner'
-                              ? 'text-amber-500'
-                              : m.role === 'admin'
-                              ? 'text-[var(--color-primary)]'
-                              : 'text-[var(--color-muted)]'
-                          }`}
-                        >
-                          [{m.role}] {m.is_muted && '· muted'}
-                        </p>
-                      </div>
-
-                      {canModerate && (
-                        <div className="relative">
-                          <button
-                            type="button"
-                            className="opacity-0 group-hover/member:opacity-100 p-0.5 rounded text-[var(--color-muted)] hover:text-[var(--color-text)] transition-opacity"
-                            onClick={() =>
-                              setPendingAction({
-                                memberId: m.id,
-                                userId: m.user_id,
-                                name: m.profile?.display_name ?? 'User',
-                                action: '',
-                              })
-                            }
-                            aria-label="Moderate member"
-                          >
-                            <MoreVertical className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
+                      {m.profile?.is_online && (
+                        <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 border border-[var(--color-surface)]" />
                       )}
                     </div>
-                  );
-                })}
 
-              {/* Pending clearance */}
-              {isAdmin && members.some((m) => m.status === 'pending') && (
-                <>
-                  <div className="pt-2 pb-1 px-1">
-                    <span className="text-[10px] uppercase tracking-wider text-[var(--color-muted)]">
-                      Pending Clearance ({members.filter((m) => m.status === 'pending').length})
-                    </span>
-                  </div>
-                  {members
-                    .filter((m) => m.status === 'pending')
-                    .map((m) => (
-                      <div
-                        key={m.id}
-                        className="flex items-center gap-1.5 p-1.5 rounded bg-amber-500/10 border border-amber-500/20"
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-[var(--color-text)] truncate font-sans">
+                        {m.profile?.display_name ?? 'Anonymous'}
+                      </p>
+                      <p
+                        className={`text-[9px] uppercase tracking-wider ${
+                          m.role === 'owner'
+                            ? 'text-amber-500 font-semibold'
+                            : m.role === 'admin'
+                            ? 'text-emerald-500 font-semibold'
+                            : 'text-[var(--color-muted)]'
+                        }`}
                       >
-                        <span className="text-xs text-[var(--color-text)] flex-1 truncate font-sans">
-                          {m.profile?.display_name ?? 'Unknown'}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleModerate('approve', m.user_id)}
-                          className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 font-mono"
-                        >
-                          Approve
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleModerate('ban', m.user_id)}
-                          className="text-[10px] px-2 py-0.5 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 font-mono"
-                        >
-                          Deny
-                        </button>
-                      </div>
-                    ))}
-                </>
-              )}
-            </div>
+                        [{m.role}] {m.is_muted && '• muted'}
+                      </p>
+                    </div>
 
-            {/* Leave squad */}
-            {membership.role !== 'owner' && (
-              <div className="p-2 border-t border-[var(--color-border)]">
-                <button
-                  type="button"
-                  onClick={handleLeave}
-                  className="w-full text-xs py-1.5 rounded text-red-400 hover:bg-red-500/10 transition-colors flex items-center justify-center gap-1.5"
-                >
-                  <UserMinus className="h-3.5 w-3.5" /> Leave Collective
-                </button>
+                    {canModerate && (
+                      <button
+                        type="button"
+                        className="opacity-0 group-hover/member:opacity-100 p-1 rounded text-[var(--color-muted)] hover:text-[var(--color-text)] transition-opacity"
+                        onClick={() =>
+                          setPendingAction({
+                            memberId: m.id,
+                            userId: m.user_id,
+                            name: m.profile?.display_name ?? 'User',
+                            action: '',
+                          })
+                        }
+                        aria-label="Moderate member"
+                      >
+                        <MoreVertical className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+
+            {/* Pending clearance */}
+            {isAdmin && members.some((m) => m.status === 'pending') && (
+              <div className="pt-3 border-t border-[var(--color-border)] space-y-1.5">
+                <p className="text-[10px] uppercase tracking-wider text-[var(--color-muted)] font-semibold px-1">
+                  Pending Clearance ({members.filter((m) => m.status === 'pending').length})
+                </p>
+                {members
+                  .filter((m) => m.status === 'pending')
+                  .map((m) => (
+                    <div
+                      key={m.id}
+                      className="flex items-center gap-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20"
+                    >
+                      <span className="text-xs text-[var(--color-text)] flex-1 truncate font-sans">
+                        {m.profile?.display_name ?? 'Unknown'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleModerate('approve', m.user_id)}
+                        className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleModerate('ban', m.user_id)}
+                        className="text-[10px] px-2 py-0.5 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30"
+                      >
+                        Deny
+                      </button>
+                    </div>
+                  ))}
               </div>
             )}
           </div>
-        )}
-      </div>
+
+          {/* Leave collective */}
+          {membership.role !== 'owner' && (
+            <div className="p-3 border-t border-[var(--color-border)]">
+              <button
+                type="button"
+                onClick={handleLeave}
+                className="w-full text-xs font-mono py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors flex items-center justify-center gap-1.5"
+              >
+                <UserMinus className="h-3.5 w-3.5" /> Leave Collective
+              </button>
+            </div>
+          )}
+        </aside>
+      )}
 
       {/* Moderation Action Modal */}
       {pendingAction && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-          <div className="w-full max-w-xs rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] p-5 shadow-xl space-y-3 font-mono">
+          <div className="w-full max-w-xs rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] p-5 shadow-xl space-y-3 font-mono">
             <h3 className="font-semibold text-xs text-[var(--color-text)] uppercase tracking-wider">
               Moderate: {pendingAction.name}
             </h3>
@@ -720,7 +716,7 @@ export default function GroupChatPage() {
                   key={action}
                   type="button"
                   onClick={() => handleModerate(action, pendingAction.userId)}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded bg-[var(--color-surface-raised)] hover:bg-[var(--color-border)] text-xs ${color} transition-colors`}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg bg-[var(--color-surface-raised)] hover:bg-[var(--color-border)] text-xs ${color} transition-colors`}
                 >
                   <Icon className="h-3.5 w-3.5 shrink-0" /> {label}
                 </button>
@@ -831,9 +827,9 @@ function GroupSettingsModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-      <div className="w-full max-w-md rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] p-6 shadow-xl space-y-4 antialiased">
+      <div className="w-full max-w-md rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] p-6 shadow-xl space-y-4 antialiased">
         <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
-          <h2 className="text-base font-semibold text-[var(--color-text)]">
+          <h2 className="text-base font-bold text-[var(--color-text)]">
             Hub Parameters
           </h2>
           <button
@@ -935,7 +931,7 @@ function GroupSettingsModal({
             <button
               type="button"
               onClick={handleDelete}
-              className="w-full py-2 rounded text-xs font-mono text-red-400 hover:bg-red-500/10 transition-colors"
+              className="w-full py-2 rounded-lg text-xs font-mono text-red-400 hover:bg-red-500/10 transition-colors"
             >
               Disband Collective Permanently
             </button>
