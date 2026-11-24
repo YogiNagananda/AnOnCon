@@ -5,21 +5,23 @@ import { Loader2 } from 'lucide-react';
 
 const variants = {
   primary:
-    'bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white',
+    'bg-[var(--color-primary)] hover:opacity-90 text-[var(--color-primary-foreground)] shadow-xs active:scale-[0.98]',
   secondary:
-    'bg-[var(--color-surface)] hover:bg-[var(--color-surface)]/80 text-[var(--color-text)] border border-[var(--color-border)]',
+    'bg-[var(--color-surface-raised)] hover:bg-[var(--color-surface)] text-[var(--color-text)] border border-[var(--color-border)] active:scale-[0.98]',
   outline:
-    'border border-[var(--color-border)] hover:bg-[var(--color-surface)] text-[var(--color-text)]',
+    'border border-[var(--color-border)] hover:bg-[var(--color-surface-raised)] text-[var(--color-text)] active:scale-[0.98]',
   ghost:
-    'hover:bg-[var(--color-surface)] text-[var(--color-text)]',
+    'hover:bg-[var(--color-surface-raised)] text-[var(--color-text)] active:scale-[0.98]',
   destructive:
-    'bg-red-600 hover:bg-red-700 text-white',
+    'bg-[#dc2626] dark:bg-[#e5484d] hover:opacity-90 text-white active:scale-[0.98]',
+  accent:
+    'bg-[var(--color-accent)] hover:opacity-90 text-white font-medium shadow-xs active:scale-[0.98]',
 } as const;
 
 const sizes = {
-  sm: 'h-8 px-3 text-sm rounded-lg',
-  md: 'h-10 px-4 text-sm rounded-xl',
-  lg: 'h-12 px-6 text-base rounded-xl',
+  sm: 'h-8 px-3 text-xs rounded-lg',
+  md: 'h-9 px-3.5 text-sm rounded-lg',
+  lg: 'h-11 px-5 text-sm rounded-xl',
 } as const;
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

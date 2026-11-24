@@ -178,21 +178,21 @@ export default function SignupPage() {
   // Show success screen after signup
   if (success) {
     return (
-      <div className="flex flex-col items-center gap-4 py-8 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10">
-          <CheckCircle2 className="h-8 w-8 text-green-400" />
+      <div className="flex flex-col items-center gap-3 py-6 text-center">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500">
+          <CheckCircle2 className="h-6 w-6" />
         </div>
-        <h2 className="text-xl font-semibold text-white">Check your email</h2>
-        <p className="text-sm text-slate-400">
+        <h2 className="text-base font-medium text-[var(--color-text)]">Check your email</h2>
+        <p className="text-xs text-[var(--color-muted)] max-w-xs">
           We&apos;ve sent a verification link to{' '}
-          <span className="font-medium text-white">{email}</span>. Click the
+          <span className="font-mono text-[var(--color-text)]">{email}</span>. Click the
           link to verify your account.
         </p>
         <Link
           href="/auth/login"
-          className="mt-4 text-sm font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
+          className="mt-3 text-xs font-medium text-[var(--color-text)] underline underline-offset-2 hover:opacity-80 transition-opacity"
         >
-          Back to Sign In
+          Return to sign in
         </Link>
       </div>
     );
@@ -206,60 +206,60 @@ export default function SignupPage() {
       : Array.from({ length: 31 }, (_, i) => i + 1);
 
   return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <h2 className="text-xl font-semibold text-white">Create an account</h2>
-        <p className="mt-1 text-sm text-slate-400">
-          Join the anonymous community
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-lg font-medium text-[var(--color-text)]">Create account</h2>
+        <p className="mt-0.5 text-xs text-[var(--color-muted)]">
+          Join the anonymous campus network
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-3.5">
         {/* Email */}
-        <div className="space-y-1.5">
-          <label htmlFor="email" className="text-sm font-medium text-slate-300">
+        <div className="space-y-1">
+          <label htmlFor="email" className="text-xs font-medium text-[var(--color-text-secondary)]">
             Email
           </label>
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+            <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-muted)]" />
             <Input
               id="email"
               type="email"
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="pl-10"
+              className="pl-9"
               disabled={loading}
             />
           </div>
           {errors.email && (
-            <p className="text-xs text-red-400">{errors.email}</p>
+            <p className="text-xs text-red-500">{errors.email}</p>
           )}
         </div>
 
         {/* Password */}
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <label
             htmlFor="password"
-            className="text-sm font-medium text-slate-300"
+            className="text-xs font-medium text-[var(--color-text-secondary)]"
           >
             Password
           </label>
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+            <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-muted)]" />
             <Input
               id="password"
               type={showPassword ? 'text' : 'password'}
               placeholder="Min. 8 characters"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="pl-10 pr-10"
+              className="pl-9 pr-9"
               disabled={loading}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
             >
               {showPassword ? (
                 <EyeOff className="h-4 w-4" />
@@ -269,33 +269,33 @@ export default function SignupPage() {
             </button>
           </div>
           {errors.password && (
-            <p className="text-xs text-red-400">{errors.password}</p>
+            <p className="text-xs text-red-500">{errors.password}</p>
           )}
         </div>
 
         {/* Confirm Password */}
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <label
             htmlFor="confirmPassword"
-            className="text-sm font-medium text-slate-300"
+            className="text-xs font-medium text-[var(--color-text-secondary)]"
           >
             Confirm Password
           </label>
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+            <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-muted)]" />
             <Input
               id="confirmPassword"
               type={showConfirmPassword ? 'text' : 'password'}
               placeholder="Re-enter password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="pl-10 pr-10"
+              className="pl-9 pr-9"
               disabled={loading}
             />
             <button
               type="button"
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
             >
               {showConfirmPassword ? (
                 <EyeOff className="h-4 w-4" />
@@ -305,16 +305,16 @@ export default function SignupPage() {
             </button>
           </div>
           {errors.confirmPassword && (
-            <p className="text-xs text-red-400">{errors.confirmPassword}</p>
+            <p className="text-xs text-red-500">{errors.confirmPassword}</p>
           )}
         </div>
 
         {/* Date of Birth */}
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-300">
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-[var(--color-text-secondary)]">
             <span className="flex items-center gap-1.5">
-              <Calendar className="h-3.5 w-3.5" />
-              Date of Birth
+              <Calendar className="h-3.5 w-3.5 text-[var(--color-muted)]" />
+              Date of Birth (18+ verification)
             </span>
           </label>
           <div className="grid grid-cols-3 gap-2">
@@ -323,7 +323,7 @@ export default function SignupPage() {
               value={dobMonth}
               onChange={(e) => setDobMonth(e.target.value)}
               disabled={loading}
-              className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-2 text-xs text-[var(--color-text)] focus:border-[var(--color-text)] focus:outline-none disabled:opacity-50"
             >
               <option value="">Month</option>
               {MONTHS.map((m, i) => (
@@ -338,7 +338,7 @@ export default function SignupPage() {
               value={dobDay}
               onChange={(e) => setDobDay(e.target.value)}
               disabled={loading}
-              className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-2 text-xs text-[var(--color-text)] focus:border-[var(--color-text)] focus:outline-none disabled:opacity-50"
             >
               <option value="">Day</option>
               {days.map((d) => (
@@ -353,7 +353,7 @@ export default function SignupPage() {
               value={dobYear}
               onChange={(e) => setDobYear(e.target.value)}
               disabled={loading}
-              className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-2 text-xs text-[var(--color-text)] focus:border-[var(--color-text)] focus:outline-none disabled:opacity-50"
             >
               <option value="">Year</option>
               {years.map((y) => (
@@ -364,54 +364,54 @@ export default function SignupPage() {
             </select>
           </div>
           {(ageError || errors.dob) && (
-            <p className="text-xs text-red-400">{ageError || errors.dob}</p>
+            <p className="text-xs text-red-500">{ageError || errors.dob}</p>
           )}
         </div>
 
         {/* 18+ Confirmation */}
-        <div className="space-y-1">
-          <label className="flex items-start gap-2 text-xs text-slate-300 cursor-pointer">
+        <div className="space-y-1 pt-1">
+          <label className="flex items-start gap-2 text-xs text-[var(--color-text-secondary)] cursor-pointer">
             <input
               type="checkbox"
               checked={confirmAdult}
               onChange={(e) => setConfirmAdult(e.target.checked)}
               disabled={loading}
-              className="mt-0.5 rounded border-slate-700 bg-slate-800 text-indigo-500 focus:ring-indigo-500"
+              className="mt-0.5 rounded border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-text)]"
             />
             <span>
-              I confirm that I am at least <strong>18 years of age</strong>.
+              I confirm that I am at least <strong className="text-[var(--color-text)]">18 years of age</strong>.
             </span>
           </label>
-          {errors.adult && <p className="text-xs text-red-400">{errors.adult}</p>}
+          {errors.adult && <p className="text-xs text-red-500">{errors.adult}</p>}
         </div>
 
         {/* Terms, Privacy & Community Guidelines */}
         <div className="space-y-1">
-          <label className="flex items-start gap-2 text-xs text-slate-400 cursor-pointer">
+          <label className="flex items-start gap-2 text-xs text-[var(--color-muted)] cursor-pointer">
             <input
               type="checkbox"
               checked={agreedToTerms}
               onChange={(e) => setAgreedToTerms(e.target.checked)}
               disabled={loading}
-              className="mt-0.5 rounded border-slate-700 bg-slate-800 text-indigo-500 focus:ring-indigo-500"
+              className="mt-0.5 rounded border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-text)]"
             />
             <span>
               I agree to the{' '}
-              <a href="/terms" className="text-indigo-400 hover:underline" target="_blank" rel="noopener noreferrer">
+              <a href="/terms" className="text-[var(--color-text)] underline hover:opacity-80" target="_blank" rel="noopener noreferrer">
                 Terms of Service
               </a>
               ,{' '}
-              <a href="/privacy" className="text-indigo-400 hover:underline" target="_blank" rel="noopener noreferrer">
+              <a href="/privacy" className="text-[var(--color-text)] underline hover:opacity-80" target="_blank" rel="noopener noreferrer">
                 Privacy Policy
               </a>
               , and{' '}
-              <a href="/guidelines" className="text-indigo-400 hover:underline" target="_blank" rel="noopener noreferrer">
+              <a href="/guidelines" className="text-[var(--color-text)] underline hover:opacity-80" target="_blank" rel="noopener noreferrer">
                 Community Guidelines
               </a>
               .
             </span>
           </label>
-          {errors.terms && <p className="text-xs text-red-400">{errors.terms}</p>}
+          {errors.terms && <p className="text-xs text-red-500">{errors.terms}</p>}
         </div>
 
         {/* Cloudflare Turnstile CAPTCHA */}
@@ -434,12 +434,12 @@ export default function SignupPage() {
       </form>
 
       {/* Divider */}
-      <div className="relative">
+      <div className="relative my-4">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-slate-700" />
+          <div className="w-full border-t border-[var(--color-border)]" />
         </div>
         <div className="relative flex justify-center text-xs">
-          <span className="bg-slate-900 px-2 text-slate-500">
+          <span className="bg-[var(--color-surface)] px-2 text-[var(--color-muted)]">
             or continue with
           </span>
         </div>
@@ -467,11 +467,11 @@ export default function SignupPage() {
       </Button>
 
       {/* Sign in link */}
-      <p className="text-center text-sm text-slate-400">
+      <p className="text-center text-xs text-[var(--color-muted)] pt-1">
         Already have an account?{' '}
         <Link
           href="/auth/login"
-          className="font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
+          className="font-medium text-[var(--color-text)] underline underline-offset-2 hover:opacity-80 transition-opacity"
         >
           Sign in
         </Link>

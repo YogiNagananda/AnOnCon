@@ -107,68 +107,68 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <h2 className="text-xl font-semibold text-white">Welcome back</h2>
-        <p className="mt-1 text-sm text-slate-400">
-          Sign in to your account
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-lg font-medium text-[var(--color-text)]">Sign in</h2>
+        <p className="mt-0.5 text-xs text-[var(--color-muted)]">
+          Access your anonymous conversations
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-3.5">
         {/* Email */}
-        <div className="space-y-1.5">
-          <label htmlFor="email" className="text-sm font-medium text-slate-300">
+        <div className="space-y-1">
+          <label htmlFor="email" className="text-xs font-medium text-[var(--color-text-secondary)]">
             Email
           </label>
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+            <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-muted)]" />
             <Input
               id="email"
               type="email"
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="pl-10"
+              className="pl-9"
               disabled={loading}
             />
           </div>
           {errors.email && (
-            <p className="text-xs text-red-400">{errors.email}</p>
+            <p className="text-xs text-red-500">{errors.email}</p>
           )}
         </div>
 
         {/* Password */}
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <div className="flex items-center justify-between">
             <label
               htmlFor="password"
-              className="text-sm font-medium text-slate-300"
+              className="text-xs font-medium text-[var(--color-text-secondary)]"
             >
               Password
             </label>
             <Link
               href="/auth/forgot-password"
-              className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+              className="text-xs text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
             >
               Forgot password?
             </Link>
           </div>
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+            <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-muted)]" />
             <Input
               id="password"
               type={showPassword ? 'text' : 'password'}
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="pl-10 pr-10"
+              className="pl-9 pr-9"
               disabled={loading}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
             >
               {showPassword ? (
                 <EyeOff className="h-4 w-4" />
@@ -178,7 +178,7 @@ export default function LoginPage() {
             </button>
           </div>
           {errors.password && (
-            <p className="text-xs text-red-400">{errors.password}</p>
+            <p className="text-xs text-red-500">{errors.password}</p>
           )}
         </div>
 
@@ -198,12 +198,12 @@ export default function LoginPage() {
       </form>
 
       {/* Divider */}
-      <div className="relative">
+      <div className="relative my-4">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-slate-700" />
+          <div className="w-full border-t border-[var(--color-border)]" />
         </div>
         <div className="relative flex justify-center text-xs">
-          <span className="bg-slate-900 px-2 text-slate-500">
+          <span className="bg-[var(--color-surface)] px-2 text-[var(--color-muted)]">
             or continue with
           </span>
         </div>
@@ -226,13 +226,13 @@ export default function LoginPage() {
       </Button>
 
       {/* Sign up link */}
-      <p className="text-center text-sm text-slate-400">
+      <p className="text-center text-xs text-[var(--color-muted)] pt-1">
         Don&apos;t have an account?{' '}
         <Link
           href="/auth/signup"
-          className="font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
+          className="font-medium text-[var(--color-text)] underline underline-offset-2 hover:opacity-80 transition-opacity"
         >
-          Sign up
+          Create account
         </Link>
       </p>
     </div>
