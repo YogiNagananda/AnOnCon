@@ -1,45 +1,52 @@
 import Link from 'next/link';
 import { Ban, ShieldAlert, ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function AccountBannedPage() {
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-      <div className="max-w-md w-full p-8 rounded-2xl bg-slate-900 border border-red-500/30 text-center shadow-xl shadow-red-950/20">
-        <div className="w-16 h-16 rounded-2xl bg-red-600/20 border border-red-500/40 flex items-center justify-center mx-auto text-red-400 mb-6">
-          <Ban className="h-8 w-8" />
+    <div className="min-h-screen bg-[var(--color-bg)] flex items-center justify-center p-4 antialiased selection:bg-[var(--color-primary)] selection:text-white">
+      <div className="max-w-md w-full p-6 sm:p-8 rounded-xl bg-[var(--color-surface)] border border-red-500/30 text-center shadow-xl space-y-5 font-mono">
+        <div className="w-12 h-12 rounded-lg bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto text-red-500">
+          <Ban className="h-6 w-6" />
         </div>
 
-        <h1 className="text-2xl font-bold text-white">Account Restricted</h1>
-        <p className="mt-3 text-sm text-slate-300 leading-relaxed">
-          Your account has been suspended or permanently banned due to violations of our{' '}
-          <Link href="/guidelines" className="text-indigo-400 hover:underline">
-            Community Guidelines
-          </Link>{' '}
-          or Terms of Service.
-        </p>
+        <div className="space-y-1">
+          <span className="text-[10px] uppercase tracking-wider text-red-500 font-semibold">
+            ACCESS TERMINATED
+          </span>
+          <h1 className="text-lg font-bold text-[var(--color-text)] font-sans">
+            Callsign Suspended or Banned
+          </h1>
+          <p className="text-xs text-[var(--color-text-secondary)] font-sans leading-relaxed">
+            Your access has been terminated due to serious violation of our{' '}
+            <Link href="/guidelines" className="text-[var(--color-primary)] hover:underline">
+              Community Guidelines
+            </Link>{' '}
+            or 18+ Terms of Service.
+          </p>
+        </div>
 
-        <div className="my-6 p-4 rounded-xl bg-slate-950 border border-slate-800 text-left text-xs text-slate-400 space-y-2">
-          <div className="flex items-start gap-2">
-            <ShieldAlert className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
-            <span>
-              We have a zero-tolerance policy for underage accounts, harassment, exploitation, and scamming.
-            </span>
+        <div className="p-3.5 rounded-lg bg-[var(--color-surface-raised)] border border-[var(--color-border)] text-left text-xs text-[var(--color-text-secondary)] space-y-1.5 font-sans">
+          <div className="flex items-start gap-2 text-amber-500 font-mono text-xs">
+            <ShieldAlert className="h-4 w-4 shrink-0 mt-0.5" />
+            <span className="font-semibold">Zero-Tolerance Mandate</span>
           </div>
-          <p>Active sessions have been terminated. Future registration attempts from flagged devices may be prevented.</p>
+          <p className="text-[11px] leading-relaxed">
+            Minor accounts, harassment, dtxing, and scam operations are permanently barred. Device signatures have been logged.
+          </p>
         </div>
 
-        <div className="space-y-3">
-          <Link
-            href="/safety"
-            className="block w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium transition-colors"
-          >
-            Visit Safety Center
+        <div className="space-y-2 pt-2">
+          <Link href="/safety" className="block">
+            <Button size="sm" variant="outline" className="w-full text-xs font-mono h-8">
+              Review Safety Center
+            </Button>
           </Link>
           <Link
             href="/"
-            className="inline-flex items-center justify-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors"
+            className="inline-flex items-center justify-center gap-1.5 text-xs font-mono text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
           >
-            <ArrowLeft className="h-3.5 w-3.5" /> Return to Homepage
+            <ArrowLeft className="h-3 w-3" /> Return to Homepage
           </Link>
         </div>
       </div>

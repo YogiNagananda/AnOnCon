@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { CheckCircle2, ArrowRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export const metadata = {
   title: 'Email Verified - Anon Connect',
@@ -7,24 +8,24 @@ export const metadata = {
 
 export default function VerifyPage() {
   return (
-    <div className="flex flex-col items-center gap-4 py-8 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10">
-        <CheckCircle2 className="h-8 w-8 text-green-400" />
+    <div className="flex flex-col items-center gap-4 py-8 text-center antialiased">
+      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+        <CheckCircle2 className="h-6 w-6 text-emerald-500" />
       </div>
 
-      <h2 className="text-xl font-semibold text-white">Email verified!</h2>
+      <h2 className="text-lg font-bold text-[var(--color-text)] font-sans">
+        Email verified
+      </h2>
 
-      <p className="text-sm text-slate-400">
-        Your email has been successfully verified. You can now sign in to your
-        account and start connecting.
+      <p className="text-xs text-[var(--color-text-secondary)] max-w-xs leading-relaxed">
+        Your email has been verified. You can now authenticate your callsign and enter the broadsheet.
       </p>
 
-      <Link
-        href="/auth/login"
-        className="mt-4 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-500"
-      >
-        Sign in
-        <ArrowRight className="h-4 w-4" />
+      <Link href="/auth/login" className="mt-2">
+        <Button size="sm" className="font-mono text-xs">
+          Proceed to Sign In
+          <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+        </Button>
       </Link>
     </div>
   );
