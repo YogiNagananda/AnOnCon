@@ -6,29 +6,47 @@ import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { INTERESTS_LIST, GENDER_OPTIONS, LANGUAGE_OPTIONS, MAX_BIO_LENGTH } from '@/lib/constants';
 import { calculateAge } from '@/lib/auth/age-utils';
-import { Loader2, Check, X, ArrowLeft, ArrowRight, User, Palette, Heart, Globe, MapPin, Calendar } from 'lucide-react';
+import {
+  Loader2,
+  Check,
+  X,
+  ArrowLeft,
+  ArrowRight,
+  Shield,
+  Fingerprint,
+  Smile,
+  Compass,
+  Tag,
+  MapPin,
+  Calendar,
+} from 'lucide-react';
 
-const AVATARS = [
-  { id: 'fox', emoji: '🦊', bg: 'bg-orange-500/20' },
-  { id: 'wolf', emoji: '🐺', bg: 'bg-gray-500/20' },
-  { id: 'cat', emoji: '🐱', bg: 'bg-yellow-500/20' },
-  { id: 'panda', emoji: '🐼', bg: 'bg-green-500/20' },
-  { id: 'owl', emoji: '🦉', bg: 'bg-amber-500/20' },
-  { id: 'dragon', emoji: '🐉', bg: 'bg-red-500/20' },
-  { id: 'unicorn', emoji: '🦄', bg: 'bg-pink-500/20' },
-  { id: 'alien', emoji: '👽', bg: 'bg-emerald-500/20' },
-  { id: 'robot', emoji: '🤖', bg: 'bg-blue-500/20' },
-  { id: 'ghost', emoji: '👻', bg: 'bg-purple-500/20' },
-  { id: 'ninja', emoji: '🥷', bg: 'bg-slate-500/20' },
-  { id: 'astronaut', emoji: '🧑‍🚀', bg: 'bg-indigo-500/20' },
+interface AvatarOption {
+  id: string;
+  name: string;
+  glyph: string;
+}
+
+const AVATAR_OPTIONS: AvatarOption[] = [
+  { id: 'fox', name: 'Fox', glyph: '🦊' },
+  { id: 'wolf', name: 'Wolf', glyph: '🐺' },
+  { id: 'cat', name: 'Cat', glyph: '🐱' },
+  { id: 'panda', name: 'Panda', glyph: '🐼' },
+  { id: 'owl', name: 'Owl', glyph: '🦉' },
+  { id: 'dragon', name: 'Dragon', glyph: '🐉' },
+  { id: 'unicorn', name: 'Unicorn', glyph: '🦄' },
+  { id: 'alien', name: 'Alien', glyph: '👽' },
+  { id: 'robot', name: 'Robot', glyph: '🤖' },
+  { id: 'ghost', name: 'Ghost', glyph: '👻' },
+  { id: 'ninja', name: 'Ninja', glyph: '🥷' },
+  { id: 'astronaut', name: 'Astronaut', glyph: '🧑‍🚀' },
 ];
 
 const MONTHS = [
-  'January','February','March','April','May','June',
-  'July','August','September','October','November','December',
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
 function OnboardingContent() {
@@ -53,7 +71,7 @@ function OnboardingContent() {
   const [nameChecking, setNameChecking] = useState(false);
 
   // Step 2: Avatar
-  const [selectedAvatar, setSelectedAvatar] = useState('');
+  const [selectedAvatar, setSelectedAvatar] = useState(AVATAR_OPTIONS[0].id);
 
   // Step 3: About
   const [gender, setGender] = useState('');
@@ -72,7 +90,10 @@ function OnboardingContent() {
 
   // Debounced display name check
   const checkDisplayName = useCallback(async (name: string) => {
-    if (name.length < 3) { setNameAvailable(null); return; }
+    if (name.length < 3) {
+      setNameAvailable(null);
+      return;
+    }
     setNameChecking(true);
     try {
       const res = await fetch(`/api/onboarding/check-display-name?name=${encodeURIComponent(name)}`);
@@ -92,7 +113,7 @@ function OnboardingContent() {
       } else {
         setNameAvailable(null);
       }
-    }, 500);
+    }, 450);
     return () => clearTimeout(timer);
   }, [displayName, checkDisplayName]);
 
@@ -112,13 +133,13 @@ function OnboardingContent() {
       case 1:
         return displayName.length >= 3 && displayName.length <= 30 && /^[a-zA-Z0-9_]+$/.test(displayName) && nameAvailable === true;
       case 2:
-        return true; // avatar is optional
+        return true;
       case 3:
         return gender !== '' && selectedLanguages.length > 0;
       case 4:
         return selectedInterests.length >= 1 && selectedInterests.length <= 10;
       case 5:
-        return true; // location is optional
+        return true;
       default:
         return false;
     }
@@ -126,10 +147,15 @@ function OnboardingContent() {
 
   async function handleDobSubmit() {
     const dobStr = getDobString();
-    if (!dobStr) { setDobError('Please fill in all fields'); return; }
+    if (!dobStr) {
+      setDobError('Please specify year, month, and day');
+      return;
+    }
     const age = calculateAge(new Date(dobStr));
-    if (age < 18) { setDobError('You must be 18 or older to use Anon Connect'); return; }
-    // Server-side check
+    if (age < 18) {
+      setDobError('Access restricted: members must be 18 years or older');
+      return;
+    }
     try {
       const res = await fetch('/api/auth/check-age', {
         method: 'POST',
@@ -144,7 +170,7 @@ function OnboardingContent() {
       setDobError('');
       setStep(1);
     } catch {
-      setDobError('Server error');
+      setDobError('Verification connection failed. Please retry.');
     }
   }
 
@@ -152,12 +178,15 @@ function OnboardingContent() {
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { toast.error('Not authenticated'); return; }
+      if (!user) {
+        toast.error('Session expired. Please sign in again.');
+        return;
+      }
 
       const dobStr = getDobString();
       const profileData: Record<string, unknown> = {
         display_name: displayName,
-        avatar_url: selectedAvatar || AVATARS[0].id,
+        avatar_url: selectedAvatar || AVATAR_OPTIONS[0].id,
         gender,
         bio: bio || null,
         interests: selectedInterests,
@@ -180,31 +209,33 @@ function OnboardingContent() {
         return;
       }
 
-      toast.success('Profile created! Welcome to Anon Connect 🎉');
+      toast.success('Anon profile created. Welcome to the broadsheet.');
       router.push('/dashboard');
     } catch {
-      toast.error('Something went wrong');
+      toast.error('Network error while completing profile');
     } finally {
       setSaving(false);
     }
   }
 
   function handleNext() {
-    if (step === 0) { handleDobSubmit(); return; }
-    if (step === (needsDob ? 5 : 4) + stepOffset) { handleComplete(); return; }
+    if (step === 0) {
+      handleDobSubmit();
+      return;
+    }
+    if (step === (needsDob ? 5 : 4) + stepOffset) {
+      handleComplete();
+      return;
+    }
     setStep(step + 1);
   }
 
   const stepLabels = needsDob
-    ? ['Verify Age', 'Display Name', 'Avatar', 'About You', 'Interests', 'Location']
-    : ['Display Name', 'Avatar', 'About You', 'Interests', 'Location'];
+    ? ['Age Gate', 'Handle', 'Mask', 'Profile', 'Interests', 'Region']
+    : ['Handle', 'Mask', 'Profile', 'Interests', 'Region'];
 
-  const stepIcons = needsDob
-    ? [Calendar, User, Palette, Globe, Heart, MapPin]
-    : [User, Palette, Globe, Heart, MapPin];
-
-  const currentLabel = stepLabels[step - (needsDob ? 0 : 1)] || stepLabels[0];
   const displayStep = step - (needsDob ? 0 : 1) + 1;
+  const currentLabel = stepLabels[displayStep - 1] || stepLabels[0];
 
   const CURRENT_YEAR = 2026;
   const years = Array.from({ length: 83 }, (_, i) => CURRENT_YEAR - 18 - i);
@@ -213,100 +244,213 @@ function OnboardingContent() {
     : Array.from({ length: 31 }, (_, i) => i + 1);
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg)] flex items-center justify-center p-4">
-      <div className="w-full max-w-lg">
-        {/* Progress */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-[var(--color-muted)]">Step {displayStep} of {totalSteps}</span>
-            <span className="text-sm font-medium text-[var(--color-primary)]">{currentLabel}</span>
+    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] flex flex-col items-center justify-center p-4 sm:p-6 antialiased selection:bg-[var(--color-primary)] selection:text-white">
+      <div className="w-full max-w-lg space-y-6">
+        {/* Header telemetry / step meter */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between text-xs font-mono text-[var(--color-muted)]">
+            <span className="inline-flex items-center gap-1.5 uppercase tracking-wider text-[var(--color-text-secondary)]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)]" />
+              Stage {String(displayStep).padStart(2, '0')} / {String(totalSteps).padStart(2, '0')}
+            </span>
+            <span className="uppercase tracking-widest text-[var(--color-primary)] font-medium">
+              // {currentLabel}
+            </span>
           </div>
-          <div className="w-full bg-[var(--color-surface)] rounded-full h-2">
-            <div
-              className="bg-[var(--color-primary)] h-2 rounded-full transition-all duration-500"
-              style={{ width: `${(displayStep / totalSteps) * 100}%` }}
-            />
+
+          {/* Segmented meter */}
+          <div className="grid grid-cols-5 sm:grid-cols-6 gap-1 w-full" style={{ gridTemplateColumns: `repeat(${totalSteps}, minmax(0, 1fr))` }}>
+            {Array.from({ length: totalSteps }).map((_, idx) => (
+              <div
+                key={idx}
+                className={`h-1 rounded-sm transition-colors duration-300 ${
+                  idx < displayStep
+                    ? 'bg-[var(--color-primary)]'
+                    : 'bg-[var(--color-surface-raised)] border border-[var(--color-border)]'
+                }`}
+              />
+            ))}
           </div>
         </div>
 
-        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-6 md:p-8">
-          {/* Step 0: DOB */}
+        {/* Main card */}
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6 sm:p-8 shadow-sm">
+          {/* Step 0: Age Gate (Google OAuth) */}
           {step === 0 && needsDob && (
             <div className="space-y-6">
-              <div className="text-center">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 text-red-400 text-xs font-semibold mb-4">
-                  <span>18+</span>
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-[var(--color-surface-raised)] border border-[var(--color-border)] font-mono text-xs text-[var(--color-primary)]">
+                  <Shield className="w-3.5 h-3.5" />
+                  <span>MANDATORY 18+ REQUIREMENT</span>
                 </div>
-                <h2 className="text-xl font-semibold text-[var(--color-text)]">Verify Your Age</h2>
-                <p className="mt-1 text-sm text-[var(--color-muted)]">Anon Connect is for adults only</p>
+                <h2 className="text-xl font-semibold tracking-tight text-[var(--color-text)]">
+                  Confirm your birth date
+                </h2>
+                <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">
+                  Anon Connect is restricted strictly to legal adults. Your birth date is kept private and never exposed on your public handle.
+                </p>
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                <select value={dobMonth} onChange={e => setDobMonth(e.target.value)}
-                  className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2.5 text-sm text-[var(--color-text)]">
-                  <option value="">Month</option>
-                  {MONTHS.map((m, i) => <option key={m} value={String(i + 1)}>{m}</option>)}
-                </select>
-                <select value={dobDay} onChange={e => setDobDay(e.target.value)}
-                  className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2.5 text-sm text-[var(--color-text)]">
-                  <option value="">Day</option>
-                  {days.map(d => <option key={d} value={String(d)}>{d}</option>)}
-                </select>
-                <select value={dobYear} onChange={e => setDobYear(e.target.value)}
-                  className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2.5 text-sm text-[var(--color-text)]">
-                  <option value="">Year</option>
-                  {years.map(y => <option key={y} value={String(y)}>{y}</option>)}
-                </select>
+
+              <div className="grid grid-cols-3 gap-2.5">
+                <div>
+                  <label className="block text-xs font-mono uppercase text-[var(--color-muted)] mb-1.5">Month</label>
+                  <select
+                    value={dobMonth}
+                    onChange={(e) => setDobMonth(e.target.value)}
+                    className="w-full h-10 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 text-sm text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)]"
+                  >
+                    <option value="">Month</option>
+                    {MONTHS.map((m, i) => (
+                      <option key={m} value={String(i + 1)}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-mono uppercase text-[var(--color-muted)] mb-1.5">Day</label>
+                  <select
+                    value={dobDay}
+                    onChange={(e) => setDobDay(e.target.value)}
+                    className="w-full h-10 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 text-sm text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)]"
+                  >
+                    <option value="">Day</option>
+                    {days.map((d) => (
+                      <option key={d} value={String(d)}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-mono uppercase text-[var(--color-muted)] mb-1.5">Year</label>
+                  <select
+                    value={dobYear}
+                    onChange={(e) => setDobYear(e.target.value)}
+                    className="w-full h-10 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 text-sm text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)]"
+                  >
+                    <option value="">Year</option>
+                    {years.map((y) => (
+                      <option key={y} value={String(y)}>
+                        {y}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              {dobError && <p className="text-sm text-red-400 text-center">{dobError}</p>}
+
+              {dobError && (
+                <div className="p-3 rounded-md bg-red-500/10 border border-red-500/20 text-xs font-medium text-red-500">
+                  {dobError}
+                </div>
+              )}
             </div>
           )}
 
           {/* Step 1: Display Name */}
           {step === 1 && (
             <div className="space-y-6">
-              <div className="text-center">
-                <h2 className="text-xl font-semibold text-[var(--color-text)]">Choose Your Identity</h2>
-                <p className="mt-1 text-sm text-[var(--color-muted)]">Pick a unique display name</p>
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-1.5 font-mono text-xs text-[var(--color-primary)]">
+                  <Fingerprint className="w-3.5 h-3.5" />
+                  <span>CAMPUS CALLSIGN</span>
+                </div>
+                <h2 className="text-xl font-semibold tracking-tight text-[var(--color-text)]">
+                  Choose your pseudonym
+                </h2>
+                <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">
+                  This is the sole handle other students see. Never use your real name, student ID, or personal contact.
+                </p>
               </div>
-              <div>
+
+              <div className="space-y-3">
                 <div className="relative">
                   <Input
-                    placeholder="e.g. ShadowFox_42"
+                    placeholder="e.g. shadow_rover"
                     value={displayName}
-                    onChange={e => setDisplayName(e.target.value)}
-                    className="pr-10"
+                    onChange={(e) => setDisplayName(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                    className="pr-10 font-mono"
                     maxLength={30}
+                    autoFocus
                   />
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
                     {nameChecking && <Loader2 className="h-4 w-4 animate-spin text-[var(--color-muted)]" />}
-                    {!nameChecking && nameAvailable === true && <Check className="h-4 w-4 text-green-400" />}
-                    {!nameChecking && nameAvailable === false && <X className="h-4 w-4 text-red-400" />}
+                    {!nameChecking && nameAvailable === true && (
+                      <span className="flex items-center gap-1 text-xs font-mono text-emerald-500">
+                        <Check className="h-3.5 w-3.5" />
+                      </span>
+                    )}
+                    {!nameChecking && nameAvailable === false && (
+                      <span className="flex items-center gap-1 text-xs font-mono text-red-500">
+                        <X className="h-3.5 w-3.5" />
+                      </span>
+                    )}
                   </div>
                 </div>
-                <p className="mt-2 text-xs text-[var(--color-muted)]">3-30 characters. Letters, numbers, underscores only.</p>
-                {nameAvailable === false && <p className="mt-1 text-xs text-red-400">This name is already taken</p>}
+
+                <div className="flex items-center justify-between text-xs font-mono text-[var(--color-muted)]">
+                  <span>3-30 chars: a-z, 0-9, underscore</span>
+                  {nameAvailable === true && (
+                    <span className="text-emerald-500 font-medium">Available</span>
+                  )}
+                  {nameAvailable === false && (
+                    <span className="text-red-500 font-medium">Handle taken</span>
+                  )}
+                </div>
+
+                {/* Identity preview */}
+                <div className="p-3 rounded-lg bg-[var(--color-surface-raised)] border border-[var(--color-border)] flex items-center justify-between">
+                  <span className="text-xs font-mono text-[var(--color-muted)]">Signal tag preview:</span>
+                  <span className="font-mono text-xs font-medium text-[var(--color-text)]">
+                    [ anon // {displayName || 'callsign'} ]
+                  </span>
+                </div>
               </div>
             </div>
           )}
 
-          {/* Step 2: Avatar */}
+          {/* Step 2: Mask / Avatar */}
           {step === 2 && (
             <div className="space-y-6">
-              <div className="text-center">
-                <h2 className="text-xl font-semibold text-[var(--color-text)]">Pick Your Avatar</h2>
-                <p className="mt-1 text-sm text-[var(--color-muted)]">Choose your anonymous identity</p>
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-1.5 font-mono text-xs text-[var(--color-primary)]">
+                  <Smile className="w-3.5 h-3.5" />
+                  <span>IDENTITY MASK</span>
+                </div>
+                <h2 className="text-xl font-semibold tracking-tight text-[var(--color-text)]">
+                  Select your mask
+                </h2>
+                <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">
+                  Your broadcast identifier across discover, nearby radio bands, and anonymous audio channels.
+                </p>
               </div>
-              <div className="grid grid-cols-4 gap-3">
-                {AVATARS.map(avatar => (
-                  <button
-                    key={avatar.id}
-                    onClick={() => setSelectedAvatar(avatar.id)}
-                    className={`flex items-center justify-center h-16 w-full rounded-xl text-3xl transition-all ${avatar.bg}
-                      ${selectedAvatar === avatar.id ? 'ring-2 ring-[var(--color-primary)] scale-110' : 'hover:scale-105 opacity-70 hover:opacity-100'}`}
-                  >
-                    {avatar.emoji}
-                  </button>
-                ))}
+
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
+                {AVATAR_OPTIONS.map((avatar) => {
+                  const isSelected = selectedAvatar === avatar.id;
+                  return (
+                    <button
+                      key={avatar.id}
+                      type="button"
+                      onClick={() => setSelectedAvatar(avatar.id)}
+                      className={`group relative flex flex-col items-center justify-center p-3 rounded-lg border text-left transition-colors duration-150 ${
+                        isSelected
+                          ? 'border-[var(--color-primary)] bg-[var(--color-accent-subtle)] ring-1 ring-[var(--color-primary)]'
+                          : 'border-[var(--color-border)] bg-[var(--color-surface-raised)] hover:border-[var(--color-border)]/80 hover:bg-[var(--color-surface-raised)]/80'
+                      }`}
+                    >
+                      <span className="text-2xl mb-1 transition-transform group-hover:scale-105">
+                        {avatar.glyph}
+                      </span>
+                      <span className="text-xs font-mono font-medium text-[var(--color-text)] tracking-tight">
+                        {avatar.name}
+                      </span>
+                      {isSelected && (
+                        <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[var(--color-primary)]" />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -314,48 +458,85 @@ function OnboardingContent() {
           {/* Step 3: About You */}
           {step === 3 && (
             <div className="space-y-6">
-              <div className="text-center">
-                <h2 className="text-xl font-semibold text-[var(--color-text)]">About You</h2>
-                <p className="mt-1 text-sm text-[var(--color-muted)]">Help others get to know you</p>
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-1.5 font-mono text-xs text-[var(--color-primary)]">
+                  <Compass className="w-3.5 h-3.5" />
+                  <span>BROADCAST NOTES</span>
+                </div>
+                <h2 className="text-xl font-semibold tracking-tight text-[var(--color-text)]">
+                  About your frequency
+                </h2>
+                <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">
+                  Basic context so matching algorithms and nearby peers know who is transmitting.
+                </p>
               </div>
+
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium text-[var(--color-text)] mb-1.5 block">Gender</label>
-                  <select value={gender} onChange={e => setGender(e.target.value)}
-                    className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-2.5 text-sm text-[var(--color-text)]">
-                    <option value="">Select gender</option>
-                    {GENDER_OPTIONS.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
+                  <label className="block text-xs font-mono uppercase tracking-wider text-[var(--color-muted)] mb-1.5">
+                    Gender Identity
+                  </label>
+                  <select
+                    value={gender}
+                    onChange={(e) => setGender(e.target.value)}
+                    className="w-full h-10 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 text-sm text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)]"
+                  >
+                    <option value="">Select gender option</option>
+                    {GENDER_OPTIONS.map((g) => (
+                      <option key={g.value} value={g.value}>
+                        {g.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
+
                 <div>
-                  <label className="text-sm font-medium text-[var(--color-text)] mb-1.5 block">Bio</label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-mono uppercase tracking-wider text-[var(--color-muted)]">
+                      Bio statement (candid & concise)
+                    </label>
+                    <span className="text-xs font-mono text-[var(--color-muted)]">
+                      {bio.length}/{MAX_BIO_LENGTH}
+                    </span>
+                  </div>
                   <textarea
                     value={bio}
-                    onChange={e => setBio(e.target.value)}
+                    onChange={(e) => setBio(e.target.value)}
                     maxLength={MAX_BIO_LENGTH}
                     rows={3}
-                    placeholder="Tell people something about you..."
-                    className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-2.5 text-sm text-[var(--color-text)] placeholder-[var(--color-muted)] resize-none focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20"
+                    placeholder="Late-night audio editor, coffee addict, studying architecture. Up for talk about films."
+                    className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-3 text-sm text-[var(--color-text)] placeholder-[var(--color-muted)] resize-none focus:outline-none focus:border-[var(--color-primary)]"
                   />
-                  <p className="text-xs text-[var(--color-muted)] text-right">{bio.length}/{MAX_BIO_LENGTH}</p>
                 </div>
+
                 <div>
-                  <label className="text-sm font-medium text-[var(--color-text)] mb-1.5 block">Languages</label>
-                  <div className="flex flex-wrap gap-2">
-                    {LANGUAGE_OPTIONS.map(lang => (
-                      <button
-                        key={lang.value}
-                        onClick={() => {
-                          setSelectedLanguages(prev =>
-                            prev.includes(lang.value) ? prev.filter(l => l !== lang.value) : [...prev, lang.value]
-                          );
-                        }}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all
-                          ${selectedLanguages.includes(lang.value) ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-bg)] text-[var(--color-muted)] border border-[var(--color-border)] hover:border-[var(--color-primary)]'}`}
-                      >
-                        {lang.label}
-                      </button>
-                    ))}
+                  <label className="block text-xs font-mono uppercase tracking-wider text-[var(--color-muted)] mb-2">
+                    Languages Spoken
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {LANGUAGE_OPTIONS.map((lang) => {
+                      const isSelected = selectedLanguages.includes(lang.value);
+                      return (
+                        <button
+                          key={lang.value}
+                          type="button"
+                          onClick={() => {
+                            setSelectedLanguages((prev) =>
+                              prev.includes(lang.value)
+                                ? prev.filter((l) => l !== lang.value)
+                                : [...prev, lang.value]
+                            );
+                          }}
+                          className={`px-3 py-1.5 rounded-md text-xs font-mono transition-colors duration-150 ${
+                            isSelected
+                              ? 'bg-[var(--color-primary)] text-white font-medium'
+                              : 'bg-[var(--color-surface-raised)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:border-[var(--color-text-secondary)]'
+                          }`}
+                        >
+                          {lang.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -365,75 +546,165 @@ function OnboardingContent() {
           {/* Step 4: Interests */}
           {step === 4 && (
             <div className="space-y-6">
-              <div className="text-center">
-                <h2 className="text-xl font-semibold text-[var(--color-text)]">Your Interests</h2>
-                <p className="mt-1 text-sm text-[var(--color-muted)]">Select 1-10 topics you enjoy</p>
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-1.5 font-mono text-xs text-[var(--color-primary)]">
+                  <Tag className="w-3.5 h-3.5" />
+                  <span>INTEREST TAGS</span>
+                </div>
+                <h2 className="text-xl font-semibold tracking-tight text-[var(--color-text)]">
+                  Choose 1–10 topics
+                </h2>
+                <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">
+                  Used by the Discover algorithm to match overlapping campus hobbies, clubs, and talk tracks.
+                </p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {INTERESTS_LIST.map(interest => (
-                  <button
-                    key={interest}
-                    onClick={() => {
-                      setSelectedInterests(prev =>
-                        prev.includes(interest) ? prev.filter(i => i !== interest) :
-                          prev.length < 10 ? [...prev, interest] : prev
-                      );
-                    }}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all
-                      ${selectedInterests.includes(interest)
-                        ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20'
-                        : 'bg-[var(--color-bg)] text-[var(--color-muted)] border border-[var(--color-border)] hover:border-[var(--color-primary)] hover:text-[var(--color-text)]'
+
+              <div className="flex flex-wrap gap-1.5 max-h-72 overflow-y-auto pr-1">
+                {INTERESTS_LIST.map((interest) => {
+                  const isSelected = selectedInterests.includes(interest);
+                  return (
+                    <button
+                      key={interest}
+                      type="button"
+                      onClick={() => {
+                        setSelectedInterests((prev) =>
+                          prev.includes(interest)
+                            ? prev.filter((i) => i !== interest)
+                            : prev.length < 10
+                            ? [...prev, interest]
+                            : prev
+                        );
+                      }}
+                      className={`px-3 py-1.5 rounded-md text-xs font-mono transition-colors duration-150 ${
+                        isSelected
+                          ? 'bg-[var(--color-primary)] text-white font-medium'
+                          : 'bg-[var(--color-surface-raised)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:border-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
                       }`}
-                  >
-                    {interest}
-                  </button>
-                ))}
+                    >
+                      {interest}
+                    </button>
+                  );
+                })}
               </div>
-              <p className="text-xs text-[var(--color-muted)] text-center">{selectedInterests.length}/10 selected</p>
+
+              <div className="flex items-center justify-between text-xs font-mono text-[var(--color-muted)] pt-2 border-t border-[var(--color-border)]">
+                <span>Min 1, Max 10 selections</span>
+                <span className={selectedInterests.length >= 1 ? 'text-[var(--color-primary)] font-medium' : ''}>
+                  [{selectedInterests.length}/10 selected]
+                </span>
+              </div>
             </div>
           )}
 
           {/* Step 5: Location */}
           {step === 5 && (
             <div className="space-y-6">
-              <div className="text-center">
-                <h2 className="text-xl font-semibold text-[var(--color-text)]">Location (Optional)</h2>
-                <p className="mt-1 text-sm text-[var(--color-muted)]">Helps connect you with people nearby</p>
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-1.5 font-mono text-xs text-[var(--color-primary)]">
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span>REGIONAL PROXIMITY</span>
+                </div>
+                <h2 className="text-xl font-semibold tracking-tight text-[var(--color-text)]">
+                  General Location (Optional)
+                </h2>
+                <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">
+                  Optional city or state for broad filter matching. In Nearby Mode, location is fuzzed within ~110m bands for complete privacy.
+                </p>
               </div>
-              <div className="space-y-4">
-                <Input label="Country" placeholder="e.g. India" value={country} onChange={e => setCountry(e.target.value)} />
-                <Input label="State / Province" placeholder="e.g. Maharashtra" value={state} onChange={e => setState(e.target.value)} />
-                <Input label="City" placeholder="e.g. Mumbai" value={city} onChange={e => setCity(e.target.value)} />
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-mono uppercase tracking-wider text-[var(--color-muted)] mb-1">
+                    Country
+                  </label>
+                  <Input
+                    placeholder="e.g. United States or India"
+                    value={country}
+                    onChange={(e) => setCountry(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-mono uppercase tracking-wider text-[var(--color-muted)] mb-1">
+                    State / Province
+                  </label>
+                  <Input
+                    placeholder="e.g. California or Karnataka"
+                    value={state}
+                    onChange={(e) => setState(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-mono uppercase tracking-wider text-[var(--color-muted)] mb-1">
+                    City / Campus Area
+                  </label>
+                  <Input
+                    placeholder="e.g. Berkeley or North Campus"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
           )}
 
-          {/* Navigation Buttons */}
-          <div className="flex items-center justify-between mt-8 pt-6 border-t border-[var(--color-border)]">
+          {/* Actions footer */}
+          <div className="flex items-center justify-between mt-8 pt-5 border-t border-[var(--color-border)]">
             <Button
               variant="ghost"
+              size="sm"
               onClick={() => setStep(step - 1)}
               disabled={step === (needsDob ? 0 : 1)}
+              className="font-mono text-xs"
             >
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back
+              <ArrowLeft className="mr-1.5 h-3.5 w-3.5" /> Back
             </Button>
 
-            {step === 5 ? (
-              <div className="flex gap-2">
-                <Button variant="ghost" onClick={handleComplete} disabled={saving}>
+            {step === (needsDob ? 5 : 5) ? (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleComplete}
+                  disabled={saving}
+                  className="font-mono text-xs text-[var(--color-muted)]"
+                >
                   Skip
                 </Button>
-                <Button onClick={handleComplete} disabled={saving}>
-                  {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : <>Complete <Check className="ml-2 h-4 w-4" /></>}
+                <Button
+                  size="sm"
+                  onClick={handleComplete}
+                  disabled={saving}
+                  className="font-mono text-xs"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      Enter broadsheet <Check className="ml-1.5 h-3.5 w-3.5" />
+                    </>
+                  )}
                 </Button>
               </div>
             ) : (
-              <Button onClick={handleNext} disabled={!canProceed()}>
-                Next <ArrowRight className="ml-2 h-4 w-4" />
+              <Button
+                size="sm"
+                onClick={handleNext}
+                disabled={!canProceed()}
+                className="font-mono text-xs"
+              >
+                Continue <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
               </Button>
             )}
           </div>
         </div>
+
+        {/* Safety footnote */}
+        <p className="text-center font-mono text-[11px] text-[var(--color-muted)]">
+          Encrypted anon transport // 18+ verified members only
+        </p>
       </div>
     </div>
   );
@@ -444,7 +715,7 @@ export default function OnboardingPage() {
     <Suspense
       fallback={
         <div className="min-h-screen bg-[var(--color-bg)] flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-[var(--color-primary)]" />
+          <Loader2 className="h-6 w-6 animate-spin text-[var(--color-primary)]" />
         </div>
       }
     >
