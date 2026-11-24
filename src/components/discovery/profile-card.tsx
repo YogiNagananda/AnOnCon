@@ -2,11 +2,10 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { SendRequestModal } from '@/components/requests/send-request-modal';
 import { BlockModal } from '@/components/safety/block-modal';
 import { ReportModal } from '@/components/safety/report-modal';
-import { UserPlus, Shield, Flag, Check, Clock, MessageSquare, MapPin } from 'lucide-react';
+import { UserPlus, Shield, Flag, Clock, MessageSquare, MapPin } from 'lucide-react';
 import Link from 'next/link';
 
 const AVATARS: Record<string, string> = {
@@ -47,39 +46,42 @@ export function ProfileCard({ profile, onRefresh }: ProfileCardProps) {
 
   return (
     <>
-      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-5 hover:border-[var(--color-primary)]/40 transition-all flex flex-col justify-between shadow-sm relative group">
+      <article className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 hover:border-[var(--color-border)]/90 transition-colors flex flex-col justify-between shadow-sm relative group">
         <div>
-          {/* Header */}
+          {/* Header row */}
           <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <div className="w-14 h-14 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center text-3xl select-none">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="relative shrink-0">
+                <div className="w-12 h-12 rounded-lg bg-[var(--color-surface-raised)] border border-[var(--color-border)] flex items-center justify-center text-2xl select-none">
                   {avatarEmoji}
                 </div>
                 {profile.is_online && (
-                  <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-[var(--color-surface)]" title="Online now" />
+                  <span
+                    className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-[var(--color-surface)]"
+                    title="Active on campus network"
+                  />
                 )}
               </div>
 
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-base text-[var(--color-text)]">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-semibold text-sm text-[var(--color-text)] truncate">
                     {profile.display_name}
                   </h3>
                   {profile.age_range && (
-                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                    <span className="font-mono text-[10px] text-[var(--color-muted)] border border-[var(--color-border)] px-1.5 py-0.5 rounded bg-[var(--color-surface-raised)]">
                       {profile.age_range}
                     </span>
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 mt-0.5 text-xs text-[var(--color-muted)]">
+                <div className="flex items-center gap-2 mt-0.5 text-xs text-[var(--color-muted)] font-mono">
                   {profile.gender && <span className="capitalize">{profile.gender}</span>}
                   {profile.area?.country && (
                     <>
-                      <span>•</span>
-                      <span className="flex items-center gap-0.5">
-                        <MapPin className="h-3 w-3" />
+                      <span>//</span>
+                      <span className="flex items-center gap-1 truncate">
+                        <MapPin className="h-3 w-3 shrink-0" />
                         {profile.area.city ? `${profile.area.city}, ` : ''}{profile.area.country}
                       </span>
                     </>
@@ -89,44 +91,48 @@ export function ProfileCard({ profile, onRefresh }: ProfileCardProps) {
             </div>
 
             {/* Quick Actions (Report/Block) */}
-            <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+            <div className="flex items-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity shrink-0">
               <button
+                type="button"
                 onClick={() => setShowReportModal(true)}
-                title="Report user"
-                className="p-1.5 rounded-lg text-slate-400 hover:text-amber-400 hover:bg-slate-800/60 transition-colors"
+                title="Report transmission"
+                className="p-1.5 rounded text-[var(--color-muted)] hover:text-amber-500 hover:bg-[var(--color-surface-raised)] transition-colors"
+                aria-label="Report"
               >
-                <Flag className="h-4 w-4" />
+                <Flag className="h-3.5 w-3.5" />
               </button>
               <button
+                type="button"
                 onClick={() => setShowBlockModal(true)}
-                title="Block user"
-                className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-800/60 transition-colors"
+                title="Block peer"
+                className="p-1.5 rounded text-[var(--color-muted)] hover:text-red-500 hover:bg-[var(--color-surface-raised)] transition-colors"
+                aria-label="Block"
               >
-                <Shield className="h-4 w-4" />
+                <Shield className="h-3.5 w-3.5" />
               </button>
             </div>
           </div>
 
-          {/* Bio */}
+          {/* Bio statement */}
           {profile.bio && (
-            <p className="mt-3 text-xs text-slate-300 leading-relaxed line-clamp-3 bg-slate-900/40 p-2.5 rounded-xl border border-slate-800/50">
+            <p className="mt-3 text-xs text-[var(--color-text-secondary)] leading-relaxed line-clamp-3 bg-[var(--color-surface-raised)] p-3 rounded-lg border border-[var(--color-border)] font-sans">
               {profile.bio}
             </p>
           )}
 
-          {/* Interests */}
+          {/* Interest tags */}
           {profile.interests && profile.interests.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-3">
               {profile.interests.slice(0, 5).map((interest) => (
                 <span
                   key={interest}
-                  className="text-[11px] bg-[var(--color-primary)]/10 text-[var(--color-primary)] px-2.5 py-0.5 rounded-full font-medium"
+                  className="text-[11px] font-mono bg-[var(--color-surface-raised)] text-[var(--color-text-secondary)] border border-[var(--color-border)] px-2 py-0.5 rounded"
                 >
-                  {interest}
+                  #{interest}
                 </span>
               ))}
               {profile.interests.length > 5 && (
-                <span className="text-[11px] text-[var(--color-muted)] px-1 py-0.5">
+                <span className="text-[10px] font-mono text-[var(--color-muted)] px-1 py-0.5">
                   +{profile.interests.length - 5}
                 </span>
               )}
@@ -134,30 +140,39 @@ export function ProfileCard({ profile, onRefresh }: ProfileCardProps) {
           )}
         </div>
 
-        {/* Footer Button */}
+        {/* Footer actions */}
         <div className="mt-4 pt-3 border-t border-[var(--color-border)]">
           {profile.connectionStatus?.status === 'accepted' ? (
-            <Link href="/dashboard/chat">
-              <Button size="sm" variant="outline" className="w-full text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10">
-                <MessageSquare className="mr-1.5 h-4 w-4" /> Message (Connected)
+            <Link href="/dashboard/chat" className="block">
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full font-mono text-xs border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10"
+              >
+                <MessageSquare className="mr-1.5 h-3.5 w-3.5" /> Open Chat Channel
               </Button>
             </Link>
           ) : profile.connectionStatus?.status === 'pending' ? (
-            <Button size="sm" variant="outline" className="w-full text-amber-400 border-amber-500/30" disabled>
-              <Clock className="mr-1.5 h-4 w-4" />
-              {profile.connectionStatus.isSender ? 'Request Sent' : 'Incoming Request'}
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full font-mono text-xs text-amber-500 border-amber-500/30 cursor-not-allowed"
+              disabled
+            >
+              <Clock className="mr-1.5 h-3.5 w-3.5" />
+              {profile.connectionStatus.isSender ? 'Signal Pending' : 'Incoming Signal'}
             </Button>
           ) : (
             <Button
               size="sm"
-              className="w-full"
+              className="w-full font-mono text-xs"
               onClick={() => setShowRequestModal(true)}
             >
-              <UserPlus className="mr-1.5 h-4 w-4" /> Connect
+              <UserPlus className="mr-1.5 h-3.5 w-3.5" /> Connect [ + ]
             </Button>
           )}
         </div>
-      </div>
+      </article>
 
       <SendRequestModal
         isOpen={showRequestModal}

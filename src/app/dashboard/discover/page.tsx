@@ -8,9 +8,7 @@ import { ProfileCard, AnonymousProfile } from '@/components/discovery/profile-ca
 import { RequestsInbox } from '@/components/requests/requests-inbox';
 import { INTERESTS_LIST, GENDER_OPTIONS, LANGUAGE_OPTIONS } from '@/lib/constants';
 import {
-  Search,
   Filter,
-  Sparkles,
   Shuffle,
   Radio,
   Bookmark,
@@ -109,19 +107,19 @@ export default function DiscoverPage() {
       });
     }
     pulse();
-    const interval = setInterval(pulse, 60000); // Pulse every minute
+    const interval = setInterval(pulse, 60000);
     return () => clearInterval(interval);
   }, [randomMode]);
 
   // "Pick Random" matching user
   function handlePickRandom() {
     if (profiles.length === 0) {
-      toast.info('No profiles available matching your current filters.');
+      toast.info('No profiles available matching current band filters.');
       return;
     }
     const randomIndex = Math.floor(Math.random() * profiles.length);
     const chosen = profiles[randomIndex];
-    toast.success(`Picked: ${chosen.display_name}! Scrolling to card.`);
+    toast.success(`Tuned to @${chosen.display_name}`);
     const el = document.getElementById(`profile-${chosen.id}`);
     el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
@@ -129,7 +127,7 @@ export default function DiscoverPage() {
   // Save Filter Preset
   async function handleSavePreset() {
     if (!presetName.trim()) {
-      toast.error('Please enter a name for the preset');
+      toast.error('Specify a label for this preset');
       return;
     }
     setSavingPreset(true);
@@ -148,14 +146,14 @@ export default function DiscoverPage() {
         }),
       });
       if (res.ok) {
-        toast.success(`Preset "${presetName}" saved!`);
+        toast.success(`Preset "${presetName}" saved`);
         setPresetName('');
         loadPresets();
       } else {
         toast.error('Failed to save preset');
       }
     } catch {
-      toast.error('Something went wrong');
+      toast.error('Network error saving preset');
     } finally {
       setSavingPreset(false);
     }
@@ -170,7 +168,7 @@ export default function DiscoverPage() {
       setSelectedInterests(preset.filters.interests);
       fetchProfiles(preset.filters.interests);
     }
-    toast.info(`Applied filter preset: ${preset.name}`);
+    toast.info(`Band filter loaded: ${preset.name}`);
   }
 
   // Delete Preset
@@ -178,7 +176,7 @@ export default function DiscoverPage() {
     try {
       await fetch(`/api/discovery/presets?id=${id}`, { method: 'DELETE' });
       setPresets((prev) => prev.filter((p) => p.id !== id));
-      toast.success('Preset deleted');
+      toast.success('Preset removed');
     } catch {
       toast.error('Failed to delete preset');
     }
@@ -194,41 +192,51 @@ export default function DiscoverPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-      {/* Top Header / View Switcher */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="max-w-4xl mx-auto px-4 py-6 space-y-6 antialiased selection:bg-[var(--color-primary)] selection:text-white">
+      {/* Top Header & Channel Switcher */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--color-border)] pb-5">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--color-text)] flex items-center gap-2">
-            <Sparkles className="h-6 w-6 text-[var(--color-primary)]" />
-            Discover People
+          <div className="flex items-center gap-2 font-mono text-xs text-[var(--color-primary)] uppercase tracking-wider mb-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)]" />
+            <span>Campus Network // 18+ Peer Band</span>
+          </div>
+          <h1 className="text-xl font-bold tracking-tight text-[var(--color-text)]">
+            Broadcast Directory
           </h1>
-          <p className="text-sm text-[var(--color-muted)]">
-            Connect anonymously with adults sharing your interests & vibe.
+          <p className="text-xs text-[var(--color-muted)] mt-0.5">
+            Discover anonymized peers on your frequency. Filter by shared topics, language, and region.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto bg-slate-900/60 p-1 rounded-xl border border-[var(--color-border)]">
+        {/* Tab switch */}
+        <div className="inline-flex items-center self-start sm:self-auto p-1 rounded-lg bg-[var(--color-surface-raised)] border border-[var(--color-border)]">
           <button
+            type="button"
             onClick={() => setActiveTab('discover')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+            className={`px-3 py-1.5 rounded-md text-xs font-mono transition-colors ${
               activeTab === 'discover'
-                ? 'bg-[var(--color-primary)] text-white shadow-sm'
-                : 'text-[var(--color-muted)] hover:text-white'
+                ? 'bg-[var(--color-surface)] text-[var(--color-text)] font-medium shadow-sm border border-[var(--color-border)]'
+                : 'text-[var(--color-muted)] hover:text-[var(--color-text)]'
             }`}
           >
-            <Users className="h-3.5 w-3.5" /> Discovery
+            <Users className="h-3.5 w-3.5 inline mr-1.5" />
+            Discovery
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('inbox')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all relative ${
+            className={`px-3 py-1.5 rounded-md text-xs font-mono transition-colors relative ${
               activeTab === 'inbox'
-                ? 'bg-[var(--color-primary)] text-white shadow-sm'
-                : 'text-[var(--color-muted)] hover:text-white'
+                ? 'bg-[var(--color-surface)] text-[var(--color-text)] font-medium shadow-sm border border-[var(--color-border)]'
+                : 'text-[var(--color-muted)] hover:text-[var(--color-text)]'
             }`}
           >
-            <Inbox className="h-3.5 w-3.5" /> Requests
+            <Inbox className="h-3.5 w-3.5 inline mr-1.5" />
+            Requests
             {pendingRequestsCount > 0 && (
-              <span className="w-2 h-2 rounded-full bg-amber-400 absolute top-1 right-1" />
+              <span className="ml-1.5 px-1.5 py-0.2 rounded-full font-mono text-[10px] bg-[var(--color-primary)] text-white">
+                {pendingRequestsCount}
+              </span>
             )}
           </button>
         </div>
@@ -238,17 +246,19 @@ export default function DiscoverPage() {
         <RequestsInbox onCountChange={setPendingRequestsCount} />
       ) : (
         <>
-          {/* Controls Bar: Random Mode, Random Button, Filter Toggle */}
-          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-sm">
+          {/* Controls Bar: Filters Toggle, Random Tuner, Random Pool */}
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 shadow-sm">
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 variant={showFilters ? 'primary' : 'outline'}
                 size="sm"
                 onClick={() => setShowFilters(!showFilters)}
+                className="font-mono text-xs"
               >
-                <Filter className="h-4 w-4 mr-1.5" /> Filters
+                <Filter className="h-3.5 w-3.5 mr-1.5" />
+                Filters
                 {selectedInterests.length > 0 && (
-                  <span className="ml-1.5 px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">
+                  <span className="ml-1.5 px-1.5 py-0.2 rounded font-mono text-[10px] bg-[var(--color-primary)]/20 text-[var(--color-primary)]">
                     {selectedInterests.length}
                   </span>
                 )}
@@ -259,33 +269,43 @@ export default function DiscoverPage() {
                 size="sm"
                 onClick={handlePickRandom}
                 disabled={loading || profiles.length === 0}
+                className="font-mono text-xs"
               >
-                <Shuffle className="h-4 w-4 mr-1.5 text-indigo-400" /> Random Pick
+                <Shuffle className="h-3.5 w-3.5 mr-1.5 text-[var(--color-primary)]" />
+                Random Tune
               </Button>
             </div>
 
-            {/* Random Mode Toggle */}
-            <div className="flex items-center gap-3 bg-slate-900/40 px-3 py-1.5 rounded-xl border border-[var(--color-border)]">
+            {/* Random Pool Toggle */}
+            <div className="flex items-center gap-3 bg-[var(--color-surface-raised)] px-3 py-1.5 rounded-lg border border-[var(--color-border)]">
               <div className="flex items-center gap-2">
                 <Radio
-                  className={`h-4 w-4 ${
-                    randomMode ? 'text-emerald-400 animate-pulse' : 'text-slate-500'
+                  className={`h-3.5 w-3.5 ${
+                    randomMode ? 'text-emerald-500' : 'text-[var(--color-muted)]'
                   }`}
                 />
-                <div className="text-left">
-                  <p className="text-xs font-medium text-[var(--color-text)]">Random Pool</p>
-                  <p className="text-[10px] text-[var(--color-muted)]">Active now (15m)</p>
+                <div className="text-left font-mono">
+                  <p className="text-xs font-medium text-[var(--color-text)]">
+                    Active Pool
+                  </p>
+                  <p className="text-[10px] text-[var(--color-muted)]">
+                    15m presence
+                  </p>
                 </div>
               </div>
+
               <button
+                type="button"
+                role="switch"
+                aria-checked={randomMode}
                 onClick={() => setRandomMode(!randomMode)}
-                className={`relative w-10 h-5.5 rounded-full transition-colors ${
-                  randomMode ? 'bg-emerald-500' : 'bg-slate-700'
+                className={`relative w-9 h-5 rounded-full transition-colors ${
+                  randomMode ? 'bg-emerald-500' : 'bg-[var(--color-border)]'
                 }`}
               >
                 <span
-                  className={`absolute top-0.5 left-0.5 w-4.5 h-4.5 bg-white rounded-full shadow transition-transform ${
-                    randomMode ? 'translate-x-4.5' : ''
+                  className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                    randomMode ? 'translate-x-4' : ''
                   }`}
                 />
               </button>
@@ -294,25 +314,30 @@ export default function DiscoverPage() {
 
           {/* Filter Panel Drawer */}
           {showFilters && (
-            <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-5 space-y-4 shadow-sm animate-in fade-in duration-200">
-              <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
-                <span className="text-sm font-semibold text-[var(--color-text)]">Filter Settings</span>
+            <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 sm:p-5 space-y-4 shadow-sm animate-in fade-in duration-150">
+              <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-2.5">
+                <span className="text-xs font-mono uppercase tracking-wider text-[var(--color-text)] font-semibold">
+                  Band Parameters
+                </span>
                 <button
+                  type="button"
                   onClick={resetFilters}
-                  className="text-xs text-[var(--color-muted)] hover:text-white flex items-center gap-1"
+                  className="text-xs font-mono text-[var(--color-muted)] hover:text-[var(--color-text)] flex items-center gap-1 transition-colors"
                 >
-                  <RotateCcw className="h-3.5 w-3.5" /> Reset all
+                  <RotateCcw className="h-3 w-3" /> Reset
                 </button>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {/* Gender */}
                 <div className="space-y-1">
-                  <label className="text-xs text-[var(--color-muted)]">Gender</label>
+                  <label className="text-xs font-mono uppercase text-[var(--color-muted)]">
+                    Gender
+                  </label>
                   <select
                     value={gender}
                     onChange={(e) => setGender(e.target.value)}
-                    className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-xs text-[var(--color-text)] focus:border-[var(--color-primary)] focus:outline-none"
+                    className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-xs text-[var(--color-text)] focus:border-[var(--color-primary)] focus:outline-none"
                   >
                     <option value="all">All Genders</option>
                     {GENDER_OPTIONS.map((g) => (
@@ -325,11 +350,13 @@ export default function DiscoverPage() {
 
                 {/* Language */}
                 <div className="space-y-1">
-                  <label className="text-xs text-[var(--color-muted)]">Language</label>
+                  <label className="text-xs font-mono uppercase text-[var(--color-muted)]">
+                    Language
+                  </label>
                   <select
                     value={language}
                     onChange={(e) => setLanguage(e.target.value)}
-                    className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-xs text-[var(--color-text)] focus:border-[var(--color-primary)] focus:outline-none"
+                    className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-xs text-[var(--color-text)] focus:border-[var(--color-primary)] focus:outline-none"
                   >
                     <option value="all">All Languages</option>
                     {LANGUAGE_OPTIONS.map((l) => (
@@ -342,11 +369,13 @@ export default function DiscoverPage() {
 
                 {/* Country Area */}
                 <div className="space-y-1">
-                  <label className="text-xs text-[var(--color-muted)]">Area Scope</label>
+                  <label className="text-xs font-mono uppercase text-[var(--color-muted)]">
+                    Region Scope
+                  </label>
                   <select
                     value={country}
                     onChange={(e) => setCountry(e.target.value)}
-                    className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-xs text-[var(--color-text)] focus:border-[var(--color-primary)] focus:outline-none"
+                    className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-xs text-[var(--color-text)] focus:border-[var(--color-primary)] focus:outline-none"
                   >
                     <option value="all">Global</option>
                     <option value="India">India</option>
@@ -361,10 +390,17 @@ export default function DiscoverPage() {
 
               {/* Interests Multi-Select */}
               <div className="space-y-2 pt-2 border-t border-[var(--color-border)]">
-                <label className="text-xs font-medium text-[var(--color-text)]">
-                  Filter by Interests
-                </label>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-mono uppercase text-[var(--color-muted)]">
+                    Topic Filter
+                  </label>
+                  {selectedInterests.length > 0 && (
+                    <span className="text-[10px] font-mono text-[var(--color-primary)]">
+                      [{selectedInterests.length} active]
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto pr-1">
                   {INTERESTS_LIST.map((item) => {
                     const isSelected = selectedInterests.includes(item);
                     return (
@@ -378,13 +414,13 @@ export default function DiscoverPage() {
                           setSelectedInterests(updated);
                           fetchProfiles(updated);
                         }}
-                        className={`text-xs px-2.5 py-1 rounded-full font-medium transition-all ${
+                        className={`text-xs font-mono px-2.5 py-1 rounded transition-colors ${
                           isSelected
-                            ? 'bg-[var(--color-primary)] text-white'
-                            : 'bg-slate-800/80 text-[var(--color-muted)] hover:text-slate-200 border border-slate-700'
+                            ? 'bg-[var(--color-primary)] text-white font-medium'
+                            : 'bg-[var(--color-surface-raised)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:border-[var(--color-text-secondary)]'
                         }`}
                       >
-                        {item}
+                        #{item}
                       </button>
                     );
                   })}
@@ -393,28 +429,29 @@ export default function DiscoverPage() {
 
               {/* Saved Presets */}
               <div className="pt-3 border-t border-[var(--color-border)] space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wider">
-                    Saved Filter Presets
-                  </span>
-                </div>
+                <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--color-muted)]">
+                  Saved Configurations
+                </span>
 
                 {presets.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5">
                     {presets.map((p) => (
                       <div
                         key={p.id}
-                        className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300"
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[var(--color-surface-raised)] border border-[var(--color-border)] text-xs font-mono text-[var(--color-text-secondary)]"
                       >
                         <button
+                          type="button"
                           onClick={() => applyPreset(p)}
-                          className="hover:text-[var(--color-primary)] font-medium"
+                          className="hover:text-[var(--color-primary)]"
                         >
                           {p.name}
                         </button>
                         <button
+                          type="button"
                           onClick={() => deletePreset(p.id)}
-                          className="text-slate-500 hover:text-red-400 ml-1"
+                          className="text-[var(--color-muted)] hover:text-red-500 ml-0.5"
+                          title="Delete preset"
                         >
                           <Trash2 className="h-3 w-3" />
                         </button>
@@ -425,19 +462,19 @@ export default function DiscoverPage() {
 
                 <div className="flex gap-2 max-w-sm pt-1">
                   <Input
-                    placeholder="Save current filters as..."
+                    placeholder="Preset label (e.g. Campus Coders)"
                     value={presetName}
                     onChange={(e) => setPresetName(e.target.value)}
-                    className="h-8 text-xs"
+                    className="h-8 text-xs font-mono"
                   />
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-8 text-xs shrink-0"
+                    className="h-8 text-xs font-mono shrink-0"
                     onClick={handleSavePreset}
                     disabled={savingPreset || !presetName.trim()}
                   >
-                    <Bookmark className="h-3.5 w-3.5 mr-1" /> Save
+                    <Bookmark className="h-3 w-3 mr-1" /> Save
                   </Button>
                 </div>
               </div>
@@ -446,19 +483,21 @@ export default function DiscoverPage() {
 
           {/* Profiles Grid */}
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-20">
-              <Loader2 className="h-8 w-8 animate-spin text-[var(--color-primary)] mb-2" />
-              <p className="text-sm text-[var(--color-muted)]">Searching anonymous profiles...</p>
+            <div className="flex flex-col items-center justify-center py-20 text-[var(--color-muted)] font-mono">
+              <Loader2 className="h-6 w-6 animate-spin text-[var(--color-primary)] mb-2" />
+              <p className="text-xs">Scanning broadsheet transmissions...</p>
             </div>
           ) : profiles.length === 0 ? (
-            <div className="bg-[var(--color-surface)] border border-dashed border-[var(--color-border)] rounded-2xl p-12 text-center">
-              <Users className="h-12 w-12 text-[var(--color-muted)] mx-auto mb-3 opacity-40" />
-              <h3 className="text-base font-semibold text-[var(--color-text)]">No matches found</h3>
-              <p className="text-sm text-[var(--color-muted)] mt-1 mb-4">
-                Try widening your age, interests, or location filters.
+            <div className="bg-[var(--color-surface)] border border-dashed border-[var(--color-border)] rounded-xl p-10 text-center">
+              <Users className="h-8 w-8 text-[var(--color-muted)] mx-auto mb-2 opacity-50" />
+              <h3 className="text-sm font-semibold text-[var(--color-text)]">
+                No active peers in this band
+              </h3>
+              <p className="text-xs text-[var(--color-muted)] mt-1 mb-4 font-mono">
+                Widen topic tags, language filters, or regional scope.
               </p>
-              <Button size="sm" variant="outline" onClick={resetFilters}>
-                <RotateCcw className="h-4 w-4 mr-1.5" /> Clear Filters
+              <Button size="sm" variant="outline" onClick={resetFilters} className="font-mono text-xs">
+                <RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Reset Band
               </Button>
             </div>
           ) : (
