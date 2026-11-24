@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Search, Users, MessageCircle, Shield, X, Loader2, Sparkles } from 'lucide-react';
+import { Search, MessageCircle, Shield, X, Loader2, Radio, Compass, Users } from 'lucide-react';
 import type { Profile } from '@/lib/supabase/types';
 import Link from 'next/link';
 
@@ -24,8 +24,13 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/auth/login'); return; }
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        router.push('/auth/login');
+        return;
+      }
 
       const { data: profileRaw } = await supabase
         .from('profiles')
@@ -41,7 +46,6 @@ export default function DashboardPage() {
 
       setProfile(profileData);
 
-      // Get connection stats
       const { count: acceptedCount } = await supabase
         .from('connection_requests')
         .select('*', { count: 'exact', head: true })
@@ -66,86 +70,116 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-[var(--color-primary)]" />
+      <div className="flex flex-col items-center justify-center min-h-[60vh] font-mono text-xs text-[var(--color-muted)]">
+        <Loader2 className="h-5 w-5 animate-spin text-[var(--color-primary)] mb-2" />
+        <p>Tuning receiver...</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-      {/* Welcome */}
-      <div className="bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 border border-[var(--color-primary)]/20 rounded-2xl p-6">
+    <div className="max-w-3xl mx-auto px-4 py-6 space-y-6 antialiased selection:bg-[var(--color-primary)] selection:text-white">
+      {/* Callsign banner */}
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-full bg-[var(--color-primary)]/20 flex items-center justify-center text-3xl">
+          <div className="w-12 h-12 rounded-lg bg-[var(--color-surface-raised)] border border-[var(--color-border)] flex items-center justify-center text-2xl shrink-0 select-none">
             {AVATARS[profile?.avatar_url || ''] || '👤'}
           </div>
-          <div>
-            <h2 className="text-xl font-semibold text-[var(--color-text)]">Welcome, {profile?.display_name}! 👋</h2>
-            <p className="text-sm text-[var(--color-muted)]">Ready to meet new people?</p>
+          <div className="min-w-0">
+            <span className="font-mono text-[10px] text-[var(--color-primary)] uppercase tracking-wider block">
+              // ACTIVE BROADSHEET CALLSIGN
+            </span>
+            <h2 className="text-base font-bold text-[var(--color-text)] truncate">
+              {profile?.display_name}
+            </h2>
+            <p className="text-xs font-mono text-[var(--color-muted)] mt-0.5">
+              18+ verified peer band // Encrypted transport
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4 text-center">
-          <p className="text-2xl font-bold text-[var(--color-primary)]">{stats.connections}</p>
-          <p className="text-xs text-[var(--color-muted)] mt-1">Connections</p>
+      {/* Network Stats */}
+      <div className="grid grid-cols-2 gap-3 font-mono">
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 text-center">
+          <p className="text-2xl font-bold text-[var(--color-text)]">{stats.connections}</p>
+          <p className="text-[11px] text-[var(--color-muted)] uppercase tracking-wider mt-0.5">
+            Confirmed Links
+          </p>
         </div>
-        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4 text-center">
-          <p className="text-2xl font-bold text-amber-400">{stats.pending}</p>
-          <p className="text-xs text-[var(--color-muted)] mt-1">Pending Requests</p>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-[var(--color-text)]">Quick Actions</h3>
-        <div className="grid grid-cols-2 gap-3">
-          <Link href="/dashboard/discover"
-            className="flex flex-col items-center gap-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-5 hover:border-[var(--color-primary)] transition-all group">
-            <Search className="h-6 w-6 text-[var(--color-muted)] group-hover:text-[var(--color-primary)]" />
-            <span className="text-sm font-medium text-[var(--color-text)]">Discover</span>
-            <span className="text-xs text-[var(--color-muted)]">Find new people</span>
-          </Link>
-          <Link href="/dashboard/chat"
-            className="flex flex-col items-center gap-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-5 hover:border-[var(--color-primary)] transition-all group">
-            <MessageCircle className="h-6 w-6 text-[var(--color-muted)] group-hover:text-[var(--color-primary)]" />
-            <span className="text-sm font-medium text-[var(--color-text)]">Chats</span>
-            <span className="text-xs text-[var(--color-muted)]">Your conversations</span>
-          </Link>
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 text-center">
+          <p className="text-2xl font-bold text-[var(--color-primary)]">{stats.pending}</p>
+          <p className="text-[11px] text-[var(--color-muted)] uppercase tracking-wider mt-0.5">
+            Pending Signals
+          </p>
         </div>
       </div>
 
-      {/* Empty state */}
-      {stats.connections === 0 && (
-        <div className="bg-[var(--color-surface)] border border-dashed border-[var(--color-border)] rounded-2xl p-8 text-center">
-          <Sparkles className="h-12 w-12 text-[var(--color-primary)] mx-auto mb-4 opacity-50" />
-          <h3 className="text-base font-semibold text-[var(--color-text)]">No connections yet</h3>
-          <p className="text-sm text-[var(--color-muted)] mt-1 mb-4">Start discovering people and send your first connection request!</p>
-          <Button onClick={() => router.push('/dashboard/discover')}>
-            <Search className="mr-2 h-4 w-4" /> Start Discovering
-          </Button>
-        </div>
-      )}
+      {/* Quick Navigation Cards */}
+      <div className="space-y-2.5">
+        <h3 className="font-mono text-xs uppercase tracking-wider text-[var(--color-muted)] font-semibold">
+          Channels & Bands
+        </h3>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 font-mono text-xs">
+          <Link
+            href="/dashboard/discover"
+            className="flex flex-col items-center gap-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 hover:border-[var(--color-primary)] transition-colors group text-center"
+          >
+            <Search className="h-5 w-5 text-[var(--color-muted)] group-hover:text-[var(--color-primary)] transition-colors" />
+            <span className="font-semibold text-[var(--color-text)]">Discover</span>
+            <span className="text-[10px] text-[var(--color-muted)]">Peer directory</span>
+          </Link>
 
-      {/* Safety Tips */}
+          <Link
+            href="/dashboard/nearby"
+            className="flex flex-col items-center gap-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 hover:border-[var(--color-primary)] transition-colors group text-center"
+          >
+            <Compass className="h-5 w-5 text-[var(--color-muted)] group-hover:text-[var(--color-primary)] transition-colors" />
+            <span className="font-semibold text-[var(--color-text)]">Nearby</span>
+            <span className="text-[10px] text-[var(--color-muted)]">Vicinity radar</span>
+          </Link>
+
+          <Link
+            href="/dashboard/groups"
+            className="flex flex-col items-center gap-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 hover:border-[var(--color-primary)] transition-colors group text-center"
+          >
+            <Users className="h-5 w-5 text-[var(--color-muted)] group-hover:text-[var(--color-primary)] transition-colors" />
+            <span className="font-semibold text-[var(--color-text)]">Squads</span>
+            <span className="text-[10px] text-[var(--color-muted)]">Campus circles</span>
+          </Link>
+
+          <Link
+            href="/dashboard/chat"
+            className="flex flex-col items-center gap-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 hover:border-[var(--color-primary)] transition-colors group text-center"
+          >
+            <MessageCircle className="h-5 w-5 text-[var(--color-muted)] group-hover:text-[var(--color-primary)] transition-colors" />
+            <span className="font-semibold text-[var(--color-text)]">Messages</span>
+            <span className="text-[10px] text-[var(--color-muted)]">1:1 channels</span>
+          </Link>
+        </div>
+      </div>
+
+      {/* Safety Notice Banner */}
       {showSafetyTips && (
-        <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-4 relative">
-          <button onClick={() => setShowSafetyTips(false)}
-            className="absolute top-3 right-3 text-amber-400/60 hover:text-amber-400">
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 relative font-mono text-xs text-amber-500">
+          <button
+            type="button"
+            onClick={() => setShowSafetyTips(false)}
+            className="absolute top-3 right-3 text-amber-500/60 hover:text-amber-500"
+            aria-label="Dismiss tips"
+          >
             <X className="h-4 w-4" />
           </button>
           <div className="flex items-start gap-3">
-            <Shield className="h-5 w-5 text-amber-400 mt-0.5 flex-shrink-0" />
-            <div>
-              <h4 className="text-sm font-semibold text-amber-400">Safety Tips</h4>
-              <ul className="mt-2 space-y-1 text-xs text-[var(--color-muted)]">
-                <li>• Never share personal information (real name, address, phone)</li>
-                <li>• Don&apos;t send money to people you meet online</li>
-                <li>• Report any suspicious or harmful behavior</li>
-                <li>• Be cautious about meeting in person</li>
+            <Shield className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+            <div className="space-y-1">
+              <h4 className="font-semibold uppercase tracking-wider text-xs">
+                Campus Safety Protocol
+              </h4>
+              <ul className="space-y-1 text-[11px] text-[var(--color-text-secondary)] font-sans">
+                <li>• Never share personal contact info, phone, address, or student IDs.</li>
+                <li>• Never transfer money, deposits, or financial details.</li>
+                <li>• Report any unsolicited harassment or suspicious behavior immediately.</li>
               </ul>
             </div>
           </div>
