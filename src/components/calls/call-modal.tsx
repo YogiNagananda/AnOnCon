@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Room, RoomEvent, Track, RemoteTrack, RemoteTrackPublication, RemoteParticipant } from 'livekit-client';
+import { Room, RoomEvent, Track, RemoteTrack } from 'livekit-client';
 import { ActiveCallState } from './call-provider';
 import { ReportModal } from '@/components/safety/report-modal';
 import { CallSafetyModal } from '@/components/safety/call-safety-modal';
@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   Loader2,
   Clock,
+  Radio,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -70,7 +71,7 @@ export function CallModal({
           body: JSON.stringify({ action: 'missed' }),
         });
       } catch {}
-      toast.info('No answer');
+      toast.info('Signal timed out — no answer');
       onEnd();
     }, 30000);
 
@@ -107,9 +108,9 @@ export function CallModal({
 
         if (!tokenRes.ok) {
           if (tokenRes.status === 503) {
-            setLivekitError('LiveKit credentials not configured in .env.local yet.');
+            setLivekitError('LiveKit WebRTC gateway pending setup.');
           } else {
-            setLivekitError(tokenData.error || 'Failed to authenticate call');
+            setLivekitError(tokenData.error || 'Failed to authenticate audio link');
           }
           setConnecting(false);
           return;
@@ -147,7 +148,7 @@ export function CallModal({
         await room.localParticipant.setMicrophoneEnabled(true);
       } catch (err: any) {
         console.error('LiveKit connection error:', err);
-        setLivekitError(err.message || 'WebRTC connection failed');
+        setLivekitError(err.message || 'WebRTC transmission failed');
       } finally {
         if (active) setConnecting(false);
       }
@@ -180,14 +181,12 @@ export function CallModal({
       if (!roomRef.current) return;
 
       if (bothVideoEnabled) {
-        // Both users opted in: enable camera
         await roomRef.current.localParticipant.setCameraEnabled(true);
         const camPub = roomRef.current.localParticipant.getTrackPublication(Track.Source.Camera);
         if (camPub?.videoTrack && localVideoRef.current) {
           camPub.videoTrack.attach(localVideoRef.current);
         }
       } else {
-        // Disable camera if not both opted in
         await roomRef.current.localParticipant.setCameraEnabled(false);
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = null;
@@ -209,38 +208,42 @@ export function CallModal({
   // 1. Ringing Incoming Screen
   if (call.status === 'ringing_incoming') {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-        <div className="w-full max-w-sm rounded-3xl bg-slate-900 border border-slate-800 p-8 shadow-2xl text-center space-y-6">
-          <div className="space-y-2">
-            <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400 animate-pulse">
-              Incoming {call.type === 'video' ? 'Video' : 'Voice'} Call
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4 antialiased selection:bg-[var(--color-primary)] selection:text-white">
+        <div className="w-full max-w-sm rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] p-8 shadow-2xl text-center space-y-6">
+          <div className="space-y-1.5 font-mono">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[10px] uppercase tracking-wider bg-emerald-500/15 border border-emerald-500/30 text-emerald-500 font-medium">
+              <Radio className="w-3 h-3 text-emerald-500" />
+              Incoming {call.type === 'video' ? 'Video' : 'Voice'} Signal
             </span>
-            <h2 className="text-xl font-bold text-white">{call.otherUserName}</h2>
+            <h2 className="text-lg font-bold text-[var(--color-text)] font-sans">
+              {call.otherUserName}
+            </h2>
           </div>
 
-          <div className="relative mx-auto w-24 h-24 flex items-center justify-center">
-            <div className="absolute inset-0 rounded-full bg-[var(--color-primary)]/20 animate-ping opacity-60" />
-            <div className="w-24 h-24 rounded-full bg-[var(--color-primary)]/20 border-2 border-[var(--color-primary)] flex items-center justify-center text-4xl select-none z-10 shadow-lg">
-              {avatarEmoji}
-            </div>
+          <div className="mx-auto w-20 h-20 rounded-xl bg-[var(--color-surface-raised)] border border-[var(--color-border)] flex items-center justify-center text-4xl select-none shadow-sm">
+            {avatarEmoji}
           </div>
 
-          <p className="text-xs text-slate-400">
-            Voice call is enabled. Video is off by default for anonymity.
+          <p className="text-xs font-mono text-[var(--color-muted)] leading-relaxed">
+            Encrypted audio frequency ready. Video feed stays masked until both peers explicitly opt in.
           </p>
 
-          <div className="flex items-center justify-center gap-6 pt-2">
+          <div className="flex items-center justify-center gap-6 pt-2 font-mono">
             <button
+              type="button"
               onClick={onDecline}
               className="flex flex-col items-center gap-1.5 group"
             >
-              <div className="w-14 h-14 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center shadow-lg transition-transform active:scale-95">
-                <PhoneOff className="h-6 w-6" />
+              <div className="w-12 h-12 rounded-lg bg-red-600 hover:bg-red-700 text-white flex items-center justify-center shadow-md transition-colors active:scale-95">
+                <PhoneOff className="h-5 w-5" />
               </div>
-              <span className="text-xs text-slate-400 group-hover:text-red-400">Decline</span>
+              <span className="text-[11px] text-[var(--color-muted)] group-hover:text-red-500">
+                Decline
+              </span>
             </button>
 
             <button
+              type="button"
               onClick={() => {
                 if (!localStorage.getItem('anon_has_seen_call_safety_tips')) {
                   setShowCallSafetyPrompt(true);
@@ -250,12 +253,15 @@ export function CallModal({
               }}
               className="flex flex-col items-center gap-1.5 group"
             >
-              <div className="w-14 h-14 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-lg transition-transform active:scale-95 animate-bounce">
-                <Phone className="h-6 w-6" />
+              <div className="w-12 h-12 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-md transition-colors active:scale-95">
+                <Phone className="h-5 w-5" />
               </div>
-              <span className="text-xs text-slate-400 group-hover:text-emerald-400">Accept</span>
+              <span className="text-[11px] text-[var(--color-muted)] group-hover:text-emerald-500">
+                Connect
+              </span>
             </button>
           </div>
+
           {showCallSafetyPrompt && (
             <CallSafetyModal
               forceOpen={showCallSafetyPrompt}
@@ -274,33 +280,38 @@ export function CallModal({
   // 2. Ringing Outgoing Screen
   if (call.status === 'ringing_outgoing') {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-        <div className="w-full max-w-sm rounded-3xl bg-slate-900 border border-slate-800 p-8 shadow-2xl text-center space-y-6">
-          <div className="space-y-1">
-            <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/20 text-indigo-400 animate-pulse">
-              Calling...
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4 antialiased selection:bg-[var(--color-primary)] selection:text-white">
+        <div className="w-full max-w-sm rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] p-8 shadow-2xl text-center space-y-6">
+          <div className="space-y-1.5 font-mono">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[10px] uppercase tracking-wider bg-[var(--color-surface-raised)] border border-[var(--color-border)] text-[var(--color-primary)] font-medium">
+              <Radio className="w-3 h-3 text-[var(--color-primary)]" />
+              Transmitting Signal...
             </span>
-            <h2 className="text-xl font-bold text-white">{call.otherUserName}</h2>
+            <h2 className="text-lg font-bold text-[var(--color-text)] font-sans">
+              {call.otherUserName}
+            </h2>
           </div>
 
-          <div className="relative mx-auto w-24 h-24 flex items-center justify-center">
-            <div className="absolute inset-0 rounded-full bg-indigo-500/20 animate-ping opacity-60" />
-            <div className="w-24 h-24 rounded-full bg-indigo-500/20 border-2 border-indigo-400 flex items-center justify-center text-4xl select-none z-10 shadow-lg">
-              {avatarEmoji}
-            </div>
+          <div className="mx-auto w-20 h-20 rounded-xl bg-[var(--color-surface-raised)] border border-[var(--color-border)] flex items-center justify-center text-4xl select-none shadow-sm">
+            {avatarEmoji}
           </div>
 
-          <p className="text-xs text-slate-400">Waiting for response (30s timeout)...</p>
+          <p className="text-xs font-mono text-[var(--color-muted)]">
+            Awaiting peer answer // 30s auto-cancel
+          </p>
 
-          <div className="flex justify-center pt-2">
+          <div className="flex justify-center pt-2 font-mono">
             <button
+              type="button"
               onClick={onEnd}
               className="flex flex-col items-center gap-1.5 group"
             >
-              <div className="w-14 h-14 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center shadow-lg transition-transform active:scale-95">
-                <PhoneOff className="h-6 w-6" />
+              <div className="w-12 h-12 rounded-lg bg-red-600 hover:bg-red-700 text-white flex items-center justify-center shadow-md transition-colors active:scale-95">
+                <PhoneOff className="h-5 w-5" />
               </div>
-              <span className="text-xs text-slate-400 group-hover:text-red-400">Cancel</span>
+              <span className="text-[11px] text-[var(--color-muted)] group-hover:text-red-500">
+                Cancel Signal
+              </span>
             </button>
           </div>
         </div>
@@ -310,50 +321,49 @@ export function CallModal({
 
   // 3. Active Call Screen
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-2 sm:p-4">
-      {/* Hidden audio element container for LiveKit remote audio */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-xs p-2 sm:p-4 antialiased selection:bg-[var(--color-primary)] selection:text-white">
       <div ref={audioContainerRef} className="hidden" />
 
-      <div className="w-full max-w-xl h-[85vh] sm:h-[80vh] flex flex-col rounded-3xl bg-slate-950 border border-slate-800 shadow-2xl overflow-hidden relative">
+      <div className="w-full max-w-xl h-[85vh] sm:h-[80vh] flex flex-col rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-2xl overflow-hidden relative">
         {/* Safety Warning Banner */}
-        <div className="bg-amber-500/20 border-b border-amber-500/30 px-4 py-2.5 text-center text-xs text-amber-300 font-medium flex items-center justify-center gap-2">
-          <AlertTriangle className="h-4 w-4 shrink-0" />
-          <span>Never share personal info, real identity, location, or send money.</span>
+        <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2.5 text-center text-xs font-mono text-amber-500 flex items-center justify-center gap-2">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+          <span>Keep it anonymous. Never share personal identity, contacts, or money.</span>
         </div>
 
-        {/* LiveKit configuration notification (if free tier keys not yet supplied) */}
         {livekitError && (
-          <div className="bg-indigo-900/40 border-b border-indigo-700/50 px-4 py-2 text-center text-xs text-indigo-200">
+          <div className="bg-[var(--color-surface-raised)] border-b border-[var(--color-border)] px-4 py-2 text-center text-xs font-mono text-[var(--color-muted)]">
             {livekitError}
           </div>
         )}
 
         {/* Top Header: Partner info & Call Duration */}
-        <div className="flex items-center justify-between px-6 py-3 border-b border-slate-800/60 bg-slate-900/40">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--color-border)] bg-[var(--color-surface-raised)]">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-lg">
+            <div className="w-8 h-8 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-base select-none">
               {avatarEmoji}
             </div>
             <div>
-              <p className="text-sm font-semibold text-white">{call.otherUserName}</p>
-              <p className="text-[11px] text-emerald-400 flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                In Call · Anonymous
+              <p className="text-xs font-semibold text-[var(--color-text)]">
+                {call.otherUserName}
+              </p>
+              <p className="text-[10px] font-mono text-emerald-500 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span>active link // anonymous</span>
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 text-xs font-mono text-slate-400 bg-slate-900 px-3 py-1 rounded-full border border-slate-800">
-            <Clock className="h-3.5 w-3.5 text-slate-500" />
+          <div className="flex items-center gap-1.5 text-xs font-mono text-[var(--color-muted)] bg-[var(--color-surface)] px-2.5 py-1 rounded border border-[var(--color-border)]">
+            <Clock className="h-3 w-3 text-[var(--color-muted)]" />
             <span>{formatDuration(duration)}</span>
           </div>
         </div>
 
         {/* Main Center Video / Avatar Area */}
-        <div className="flex-1 relative flex items-center justify-center bg-slate-900/30 overflow-hidden">
+        <div className="flex-1 relative flex items-center justify-center bg-[var(--color-bg)] overflow-hidden">
           {bothVideoEnabled ? (
             <div className="relative w-full h-full flex items-center justify-center bg-black">
-              {/* Remote Video Stream */}
               <video
                 ref={remoteVideoRef}
                 autoPlay
@@ -361,8 +371,8 @@ export function CallModal({
                 className="w-full h-full object-cover"
               />
 
-              {/* Local Video Stream (Picture-in-Picture) */}
-              <div className="absolute top-4 right-4 w-32 h-44 rounded-2xl overflow-hidden border-2 border-slate-700 bg-slate-900 shadow-xl">
+              {/* Local Video Stream PIP */}
+              <div className="absolute top-4 right-4 w-28 h-40 rounded-lg overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface)] shadow-lg">
                 <video
                   ref={localVideoRef}
                   autoPlay
@@ -370,32 +380,34 @@ export function CallModal({
                   muted
                   className="w-full h-full object-cover -scale-x-100"
                 />
-                <span className="absolute bottom-1 left-2 text-[10px] bg-black/60 px-1.5 rounded text-white font-medium">
+                <span className="absolute bottom-1 left-2 text-[9px] font-mono bg-black/70 px-1 rounded text-white">
                   You
                 </span>
               </div>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center space-y-4 p-6 text-center">
-              <div className="w-28 h-28 rounded-full bg-indigo-500/10 border-2 border-indigo-500/30 flex items-center justify-center text-5xl shadow-2xl">
+              <div className="w-24 h-24 rounded-xl bg-[var(--color-surface-raised)] border border-[var(--color-border)] flex items-center justify-center text-5xl shadow-sm select-none">
                 {avatarEmoji}
               </div>
 
-              <div className="space-y-1 max-w-xs">
-                <p className="text-base font-semibold text-white">Voice Call Active</p>
-                <p className="text-xs text-slate-400">
+              <div className="space-y-1 max-w-xs font-mono">
+                <p className="text-sm font-semibold text-[var(--color-text)] font-sans">
+                  Voice Channel Transmitting
+                </p>
+                <p className="text-xs text-[var(--color-muted)] leading-relaxed">
                   {myVideoOptIn && !partnerVideoOptIn
-                    ? 'Your camera is ready. Waiting for partner to also enable camera to show video.'
+                    ? 'Your camera is armed. Waiting for partner camera opt-in.'
                     : !myVideoOptIn && partnerVideoOptIn
-                    ? 'Partner requested video. Turn on your camera to start mutual video.'
-                    : 'Video is off by default for privacy. Both participants must opt in to enable video.'}
+                    ? 'Peer requested mutual camera feed. Enable camera to accept.'
+                    : 'Audio link active. Mutual video requires opt-in from both participants.'}
                 </p>
               </div>
 
               {myVideoOptIn && !partnerVideoOptIn && (
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  <span>Waiting for partner camera opt-in...</span>
+                <div className="flex items-center gap-2 px-3 py-1 rounded-md bg-[var(--color-surface-raised)] border border-[var(--color-border)] text-[var(--color-primary)] font-mono text-xs">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <span>Awaiting peer video handshake...</span>
                 </div>
               )}
             </div>
@@ -403,64 +415,71 @@ export function CallModal({
         </div>
 
         {/* Bottom Control Bar */}
-        <div className="p-4 bg-slate-900/80 border-t border-slate-800 flex items-center justify-between">
+        <div className="p-4 bg-[var(--color-surface-raised)] border-t border-[var(--color-border)] flex items-center justify-between">
           {/* Report Button */}
           <button
+            type="button"
             onClick={() => setShowReportModal(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs text-amber-400 hover:bg-amber-500/10 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-xs text-amber-500 hover:bg-amber-500/10 transition-colors"
             title="Report this user"
+            aria-label="Report"
           >
             <ShieldAlert className="h-4 w-4" />
-            <span className="hidden sm:inline">Report</span>
+            <span className="hidden sm:inline">Report Peer</span>
           </button>
 
           {/* Central Media Controls */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             {/* Mic Toggle */}
             <button
+              type="button"
               onClick={handleToggleMic}
-              className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
+              className={`w-11 h-11 rounded-lg flex items-center justify-center transition-colors ${
                 isMuted
-                  ? 'bg-red-500/20 text-red-400 border border-red-500/40'
-                  : 'bg-slate-800 text-white hover:bg-slate-700'
+                  ? 'bg-red-500/10 text-red-500 border border-red-500/30'
+                  : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text)] hover:bg-[var(--color-bg)]'
               }`}
               title={isMuted ? 'Unmute microphone' : 'Mute microphone'}
+              aria-label="Toggle Microphone"
             >
-              {isMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+              {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
             </button>
 
-            {/* Video Opt-In Toggle */}
+            {/* Video Toggle */}
             <button
+              type="button"
               onClick={() => onToggleVideo(!myVideoOptIn)}
-              className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
+              className={`w-11 h-11 rounded-lg flex items-center justify-center transition-colors ${
                 myVideoOptIn
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  ? 'bg-[var(--color-primary)] text-white shadow-sm'
+                  : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg)]'
               }`}
               title={
                 myVideoOptIn
                   ? 'Turn camera off'
                   : 'Turn camera on (both users must opt in)'
               }
+              aria-label="Toggle Video"
             >
-              {myVideoOptIn ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
+              {myVideoOptIn ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
             </button>
 
             {/* End Call Button */}
             <button
+              type="button"
               onClick={onEnd}
-              className="w-12 h-12 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center shadow-lg shadow-red-600/30 transition-all active:scale-95"
-              title="End call"
+              className="w-11 h-11 rounded-lg bg-red-600 hover:bg-red-700 text-white flex items-center justify-center shadow-sm transition-colors active:scale-95"
+              title="Terminate call"
+              aria-label="End Call"
             >
-              <PhoneOff className="h-5 w-5" />
+              <PhoneOff className="h-4 w-4" />
             </button>
           </div>
 
-          <div className="w-12 sm:w-16" />
+          <div className="w-16 hidden sm:block" />
         </div>
       </div>
 
-      {/* Safety Report Modal */}
       {showReportModal && (
         <ReportModal
           isOpen={showReportModal}
