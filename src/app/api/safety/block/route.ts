@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { checkRateLimit } from '@/lib/security/rateLimit';
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const limitCheck = checkRateLimit(user.id, 'blocks');
+    if (!limitCheck.success) {
+      return NextResponse.json(
+        { error: `Too many block requests. Please wait ${limitCheck.resetSeconds}s.` },
+        { status: 429, headers: { 'Retry-After': String(limitCheck.resetSeconds) } }
+      );
+    }
 
     const body = await request.json();
     const { target_user_id, reason } = body;

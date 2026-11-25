@@ -21,10 +21,12 @@ import {
   Inbox,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useMemo, useState, Suspense } from 'react';
 import type { Profile } from '@/lib/supabase/types';
 import Link from 'next/link';
 import { CallProvider } from '@/components/calls/call-provider';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
+import { useRealtimeCounts } from '@/hooks/use-realtime-counts';
 
 const CORE_ITEMS = [
   { href: '/dashboard', icon: Home, label: 'Feed' },
@@ -53,9 +55,9 @@ const AVATARS: Record<string, string> = {
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [unreadCounts, setUnreadCounts] = useState({ pendingRequests: 0, unreadMessages: 0 });
+  const { counts: unreadCounts } = useRealtimeCounts(profile?.id ?? null);
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
 
   useEffect(() => {
@@ -79,23 +81,15 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    async function load() {
+    async function loadProfile() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) return;
       const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
       if (data) setProfile(data as Profile);
-
-      try {
-        const res = await fetch('/api/notifications/counts');
-        const countData = await res.json();
-        if (res.ok) setUnreadCounts(countData);
-      } catch {}
     }
-    load();
-    const interval = setInterval(load, 15000);
-    return () => clearInterval(interval);
+    loadProfile();
   }, [supabase]);
 
   async function handleSignOut() {
@@ -372,7 +366,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        {children}
+        <ErrorBoundary>{children}</ErrorBoundary>
       </main>
 
       {/* Mobile bottom navigation */}

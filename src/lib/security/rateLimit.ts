@@ -8,13 +8,18 @@ export interface RateLimitRule {
   windowMs: number;
 }
 
-export const RATE_LIMIT_RULES: Record<string, RateLimitRule> = {
+export const RATE_LIMIT_RULES = {
   signup: { max: 5, windowMs: 60 * 60 * 1000 },          // 5 per IP / hour
   login: { max: 10, windowMs: 15 * 60 * 1000 },          // 10 per IP / 15 mins
   requests: { max: 20, windowMs: 60 * 60 * 1000 },       // 20 requests / hour
   messages: { max: 60, windowMs: 60 * 1000 },            // 60 messages / minute
   reports: { max: 10, windowMs: 60 * 60 * 1000 },        // 10 reports / hour
-};
+  calls: { max: 15, windowMs: 60 * 60 * 1000 },          // 15 calls / hour
+  discovery: { max: 60, windowMs: 60 * 1000 },           // 60 discovery searches / minute
+  blocks: { max: 30, windowMs: 60 * 60 * 1000 },         // 30 blocks / hour
+  profile_update: { max: 20, windowMs: 60 * 60 * 1000 }, // 20 profile updates / hour
+  reactions: { max: 120, windowMs: 60 * 1000 },          // 120 reactions / minute
+} as const satisfies Record<string, RateLimitRule>;
 
 interface WindowEntry {
   timestamps: number[];

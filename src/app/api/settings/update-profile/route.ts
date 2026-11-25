@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { DISPLAY_NAME_COOLDOWN_DAYS, MAX_BIO_LENGTH } from '@/lib/constants';
+import { checkRateLimit } from '@/lib/security/rateLimit';
 import type { Profile, ProfileUpdate } from '@/lib/supabase/types';
 
 export async function POST(request: NextRequest) {
@@ -8,6 +9,14 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const limitCheck = checkRateLimit(user.id, 'profile_update');
+    if (!limitCheck.success) {
+      return NextResponse.json(
+        { error: `Too many profile updates. Please wait ${limitCheck.resetSeconds}s.` },
+        { status: 429, headers: { 'Retry-After': String(limitCheck.resetSeconds) } }
+      );
+    }
 
     const body = await request.json();
     const updates: ProfileUpdate = {};
@@ -64,6 +73,9 @@ export async function POST(request: NextRequest) {
     if (body.interests) updates.interests = body.interests as string[];
     if (body.languages) updates.languages = body.languages as string[];
     if (body.is_visible !== undefined) updates.is_visible = body.is_visible as boolean;
+    if (typeof body.read_receipts_visible === 'boolean') {
+      updates.read_receipts_visible = body.read_receipts_visible;
+    }
 
     if (Object.keys(updates).length > 0) {
       const { error } = await supabase.from('profiles').update(updates).eq('id', user.id);

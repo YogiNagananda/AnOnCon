@@ -28,6 +28,9 @@ export interface Database {
           suspended_until: string | null;
           is_banned: boolean;
           role: 'user' | 'admin';
+          mood_status: string | null;
+          mood_updated_at: string | null;
+          read_receipts_visible: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -49,6 +52,9 @@ export interface Database {
           suspended_until?: string | null;
           is_banned?: boolean;
           role?: 'user' | 'admin';
+          mood_status?: string | null;
+          mood_updated_at?: string | null;
+          read_receipts_visible?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -70,6 +76,9 @@ export interface Database {
           suspended_until?: string | null;
           is_banned?: boolean;
           role?: 'user' | 'admin';
+          mood_status?: string | null;
+          mood_updated_at?: string | null;
+          read_receipts_visible?: boolean;
           updated_at?: string;
         };
         Relationships: [];
@@ -697,6 +706,30 @@ export interface Database {
         };
         Relationships: [];
       };
+      message_reactions: {
+        Row: {
+          id: string;
+          message_id: string;
+          user_id: string;
+          emoji: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          message_id: string;
+          user_id: string;
+          emoji: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          message_id?: string;
+          user_id?: string;
+          emoji?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       public_profiles: {
@@ -717,7 +750,12 @@ export interface Database {
           is_suspended: boolean;
           suspended_until: string | null;
           is_banned: boolean;
+          role: 'user' | 'admin';
           created_at: string;
+          updated_at: string;
+          mood_status: string | null;
+          mood_updated_at: string | null;
+          read_receipts_visible: boolean;
         };
         Relationships: [];
       };
@@ -772,3 +810,4 @@ export type FilterPreset = Database['public']['Tables']['filter_presets']['Row']
 export type PredefinedInterest = Database['public']['Tables']['predefined_interests']['Row'];
 export type BannedIdentifier = Database['public']['Tables']['banned_identifiers']['Row'];
 export type RateLimit = Database['public']['Tables']['rate_limits']['Row'];
+export type MessageReaction = Database['public']['Tables']['message_reactions']['Row'];

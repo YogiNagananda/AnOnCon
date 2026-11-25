@@ -31,7 +31,18 @@ import {
   Tag,
   ShieldCheck,
   Lock,
+  SmilePlus,
 } from 'lucide-react';
+
+const REACTION_OPTIONS = ['👍', '❤️', '😂', '😮', '🔥', '👏'];
+
+interface ReactionItem {
+  id: string;
+  message_id: string;
+  user_id: string;
+  emoji: string;
+  created_at: string;
+}
 
 const AVATARS: Record<string, string> = {
   fox: '🦊', wolf: '🐺', cat: '🐱', panda: '🐼',
@@ -60,6 +71,9 @@ export default function ChatDetailPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [otherUser, setOtherUser] = useState<any>(null);
   const [messages, setMessages] = useState<MessageItem[]>([]);
+  const [reactions, setReactions] = useState<ReactionItem[]>([]);
+  const [activeReactionMsgId, setActiveReactionMsgId] = useState<string | null>(null);
+  const [readReceiptsVisible, setReadReceiptsVisible] = useState(true);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
@@ -92,6 +106,7 @@ export default function ChatDetailPage() {
       }
       setOtherUser(data.otherUser);
       setMessages(data.messages || []);
+      setReactions(data.reactions || []);
       setTimeout(scrollToBottom, 100);
     } catch {
       toast.error('An error occurred loading conversation');
@@ -110,6 +125,14 @@ export default function ChatDetailPage() {
         return;
       }
       setCurrentUserId(user.id);
+      const { data: myProfile } = await supabase
+        .from('profiles')
+        .select('read_receipts_visible')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (typeof myProfile?.read_receipts_visible === 'boolean') {
+        setReadReceiptsVisible(myProfile.read_receipts_visible);
+      }
       loadChat();
     }
     init();
@@ -141,7 +164,7 @@ export default function ChatDetailPage() {
             });
             setTimeout(scrollToBottom, 50);
 
-            if (newMsg.sender_id !== currentUserId) {
+            if (newMsg.sender_id !== currentUserId && readReceiptsVisible) {
               supabase
                 .from('messages')
                 .update({ read_at: new Date().toISOString() })
@@ -152,6 +175,28 @@ export default function ChatDetailPage() {
             setMessages((prev) =>
               prev.map((m) => (m.id === updated.id ? updated : m))
             );
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'message_reactions',
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const nextReaction = payload.new as ReactionItem;
+            setReactions((prev) => {
+              if (prev.some((r) => r.id === nextReaction.id)) return prev;
+              return [...prev, nextReaction];
+            });
+          } else if (payload.eventType === 'DELETE') {
+            const removed = payload.old as Partial<ReactionItem>;
+            if (removed.id) {
+              setReactions((prev) => prev.filter((r) => r.id !== removed.id));
+            }
           }
         }
       )
@@ -170,7 +215,7 @@ export default function ChatDetailPage() {
       supabase.removeChannel(channel);
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     };
-  }, [chatId, currentUserId, supabase]);
+  }, [chatId, currentUserId, readReceiptsVisible, supabase]);
 
   // Broadcast typing
   function handleTyping(val: string) {
@@ -238,6 +283,29 @@ export default function ChatDetailPage() {
       toast.success('Message deleted');
     } catch {
       toast.error('An error occurred');
+    }
+  }
+
+  // Toggle message reaction
+  async function handleToggleReaction(msgId: string, emoji: string) {
+    setActiveReactionMsgId(null);
+    try {
+      const res = await fetch(`/api/messages/${msgId}/reactions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emoji }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to update reaction');
+        return;
+      }
+      setReactions((prev) => [
+        ...prev.filter((r) => r.message_id !== msgId),
+        ...(data.reactions || []),
+      ]);
+    } catch {
+      toast.error('Network failure updating reaction');
     }
   }
 
@@ -538,6 +606,75 @@ export default function ChatDetailPage() {
                         </div>
                       )}
                     </div>
+
+                    {/* Reaction pills & quick picker */}
+                    {!m.is_deleted && (() => {
+                      const msgReactions = reactions.filter((r) => r.message_id === m.id);
+                      const grouped = msgReactions.reduce<Record<string, { count: number; mine: boolean }>>(
+                        (acc, r) => {
+                          if (!acc[r.emoji]) acc[r.emoji] = { count: 0, mine: false };
+                          acc[r.emoji].count += 1;
+                          if (r.user_id === currentUserId) acc[r.emoji].mine = true;
+                          return acc;
+                        },
+                        {}
+                      );
+                      const entries = Object.entries(grouped);
+                      const isPickerOpen = activeReactionMsgId === m.id;
+
+                      return (
+                        <div className={`flex flex-wrap items-center gap-1 mt-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
+                          {entries.map(([emoji, info]) => (
+                            <button
+                              key={emoji}
+                              type="button"
+                              onClick={() => handleToggleReaction(m.id, emoji)}
+                              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] border transition-colors ${
+                                info.mine
+                                  ? 'bg-[var(--color-primary)]/15 border-[var(--color-primary)]/40 text-[var(--color-text)]'
+                                  : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-text)]'
+                              }`}
+                            >
+                              <span>{emoji}</span>
+                              <span className="font-mono text-[10px]">{info.count}</span>
+                            </button>
+                          ))}
+
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setActiveReactionMsgId(isPickerOpen ? null : m.id)
+                              }
+                              className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 rounded-full text-[var(--color-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all"
+                              title="React to message"
+                              aria-label="React to message"
+                            >
+                              <SmilePlus className="h-3 w-3" />
+                            </button>
+
+                            {isPickerOpen && (
+                              <div
+                                className={`absolute bottom-full mb-1 z-20 flex items-center gap-1 px-2 py-1 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] shadow-md ${
+                                  isMe ? 'right-0' : 'left-0'
+                                }`}
+                              >
+                                {REACTION_OPTIONS.map((emoji) => (
+                                  <button
+                                    key={emoji}
+                                    type="button"
+                                    onClick={() => handleToggleReaction(m.id, emoji)}
+                                    className="p-1 rounded-full hover:bg-[var(--color-surface-raised)] hover:scale-110 transition-transform text-xs"
+                                  >
+                                    {emoji}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               );

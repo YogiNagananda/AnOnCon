@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { filterMessageContent } from '@/lib/safety/messageFilter';
+import { checkRateLimit } from '@/lib/security/rateLimit';
 
 export async function GET(
   request: NextRequest,
@@ -73,22 +74,45 @@ export async function GET(
       (m) => !(m.deleted_by_users && m.deleted_by_users.includes(user.id))
     );
 
-    // 5. Mark other user's unread messages as read
+    // 5. Mark other user's unread messages as read (unless user disabled read receipts)
     const unreadMessageIds = filteredMessages
       .filter((m) => m.sender_id === otherUserId && !m.read_at)
       .map((m) => m.id);
 
     if (unreadMessageIds.length > 0) {
-      await supabase
-        .from('messages')
-        .update({ read_at: new Date().toISOString() })
-        .in('id', unreadMessageIds);
+      const { data: myProfile } = await supabase
+        .from('profiles')
+        .select('read_receipts_visible')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (myProfile?.read_receipts_visible !== false) {
+        await supabase
+          .from('messages')
+          .update({ read_at: new Date().toISOString() })
+          .in('id', unreadMessageIds);
+      }
+    }
+
+    // 6. Fetch message reactions (resilient if migration 00009 not yet applied)
+    let reactions: Array<{ id: string; message_id: string; user_id: string; emoji: string; created_at: string }> = [];
+    const messageIds = filteredMessages.map((m) => m.id);
+    if (messageIds.length > 0) {
+      const { data: reactionRows, error: reactionsError } = await supabase
+        .from('message_reactions')
+        .select('id, message_id, user_id, emoji, created_at')
+        .in('message_id', messageIds);
+
+      if (!reactionsError && reactionRows) {
+        reactions = reactionRows;
+      }
     }
 
     return NextResponse.json({
       chat,
       otherUser,
       messages: filteredMessages,
+      reactions,
     });
   } catch (err) {
     console.error('Chat details error:', err);
@@ -105,6 +129,14 @@ export async function POST(
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const limitCheck = checkRateLimit(user.id, 'messages');
+    if (!limitCheck.success) {
+      return NextResponse.json(
+        { error: `Sending messages too fast. Please wait ${limitCheck.resetSeconds}s.` },
+        { status: 429, headers: { 'Retry-After': String(limitCheck.resetSeconds) } }
+      );
+    }
 
     const body = await request.json();
     const { content } = body;

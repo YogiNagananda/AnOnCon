@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { checkRateLimit } from '@/lib/security/rateLimit';
 
 // POST /api/calls — initiate a call
 export async function POST(request: NextRequest) {
@@ -7,6 +8,14 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const limitCheck = checkRateLimit(user.id, 'calls');
+    if (!limitCheck.success) {
+      return NextResponse.json(
+        { error: `Too many call attempts. Please wait ${limitCheck.resetSeconds}s.` },
+        { status: 429, headers: { 'Retry-After': String(limitCheck.resetSeconds) } }
+      );
+    }
 
     const { chat_id, type } = await request.json();
     if (!chat_id) return NextResponse.json({ error: 'chat_id required' }, { status: 400 });

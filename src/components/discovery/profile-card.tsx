@@ -25,6 +25,7 @@ export interface AnonymousProfile {
   languages?: string[] | null;
   area?: { country?: string; state?: string; city?: string } | null;
   is_online?: boolean;
+  mood_status?: string | null;
   connectionStatus?: {
     status: string; // 'pending' | 'accepted'
     requestId: string;
@@ -114,6 +115,11 @@ export function ProfileCard({ profile, onRefresh }: ProfileCardProps) {
           </div>
 
           {/* Bio statement */}
+          {profile.mood_status && (
+            <p className="mt-2.5 text-[11px] font-mono text-[var(--color-primary)] bg-[var(--color-primary)]/5 border border-[var(--color-primary)]/20 px-2.5 py-1 rounded-md truncate">
+              Status: {profile.mood_status}
+            </p>
+          )}
           {profile.bio && (
             <p className="mt-3 text-xs text-[var(--color-text-secondary)] leading-relaxed line-clamp-3 bg-[var(--color-surface-raised)] p-3 rounded-lg border border-[var(--color-border)] font-sans">
               {profile.bio}

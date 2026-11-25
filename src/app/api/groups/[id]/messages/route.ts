@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { filterMessageContent } from '@/lib/safety/messageFilter';
+import { checkRateLimit } from '@/lib/security/rateLimit';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -65,6 +66,14 @@ export async function POST(request: NextRequest, { params }: Params) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const limitCheck = checkRateLimit(user.id, 'messages');
+    if (!limitCheck.success) {
+      return NextResponse.json(
+        { error: `Sending messages too fast. Please wait ${limitCheck.resetSeconds}s.` },
+        { status: 429, headers: { 'Retry-After': String(limitCheck.resetSeconds) } }
+      );
+    }
 
     const adminSupabase = await createAdminClient();
 

@@ -44,6 +44,9 @@ export default function SettingsPage() {
   const [interests, setInterests] = useState<string[]>([]);
   const [languages, setLanguages] = useState<string[]>([]);
   const [isVisible, setIsVisible] = useState(true);
+  const [moodStatus, setMoodStatus] = useState('');
+  const [readReceiptsVisible, setReadReceiptsVisible] = useState(true);
+  const [savingMood, setSavingMood] = useState(false);
 
   // Delete account
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -82,6 +85,8 @@ export default function SettingsPage() {
       setInterests(data.interests || []);
       setLanguages(data.languages || []);
       setIsVisible(data.is_visible);
+      setMoodStatus(data.mood_status || '');
+      setReadReceiptsVisible(data.read_receipts_visible ?? true);
       setLoading(false);
     }
     loadProfile();
@@ -181,6 +186,55 @@ export default function SettingsPage() {
       toast.success(
         newValue ? 'Callsign visible on discovery frequency' : 'Callsign hidden from discovery'
       );
+    }
+  }
+
+  async function handleSaveMood(nextMood?: string) {
+    const valueToSave = nextMood !== undefined ? nextMood : moodStatus;
+    setSavingMood(true);
+    try {
+      const res = await fetch('/api/settings/mood', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mood_status: valueToSave }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to update status');
+        return;
+      }
+      setMoodStatus(data.mood_status || '');
+      setProfile((prev) =>
+        prev ? { ...prev, mood_status: data.mood_status, mood_updated_at: data.mood_updated_at } : prev
+      );
+      setEditSection(null);
+      toast.success(data.mood_status ? 'Status updated' : 'Status cleared');
+    } catch {
+      toast.error('Network failure updating status');
+    } finally {
+      setSavingMood(false);
+    }
+  }
+
+  async function handleReadReceiptsToggle() {
+    const newValue = !readReceiptsVisible;
+    setReadReceiptsVisible(newValue);
+    try {
+      const res = await fetch('/api/settings/update-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ read_receipts_visible: newValue }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setReadReceiptsVisible(!newValue);
+        toast.error(data.error || 'Failed to update read receipts preference');
+        return;
+      }
+      toast.success(newValue ? 'Read receipts enabled' : 'Read receipts hidden');
+    } catch {
+      setReadReceiptsVisible(!newValue);
+      toast.error('Network failure updating setting');
     }
   }
 
@@ -395,6 +449,62 @@ export default function SettingsPage() {
                 </div>
               </div>
             )}
+
+            {/* Mood Status */}
+            <div className="px-4 py-3.5 flex items-center justify-between">
+              <div className="min-w-0 pr-4">
+                <p className="font-medium text-[var(--color-text)]">Mood Status</p>
+                <p className="font-mono text-[11px] text-[var(--color-muted)] line-clamp-1 mt-0.5">
+                  {profile?.mood_status || 'No status set'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditSection(editSection === 'mood' ? null : 'mood')}
+                className="font-mono text-xs text-[var(--color-primary)] hover:underline shrink-0"
+              >
+                Edit
+              </button>
+            </div>
+            {editSection === 'mood' && (
+              <div className="px-4 py-3 space-y-3 bg-[var(--color-surface-raised)] font-mono">
+                <Input
+                  value={moodStatus}
+                  onChange={(e) => setMoodStatus(e.target.value)}
+                  placeholder="What are you up to? (max 60 chars)"
+                  maxLength={60}
+                  className="text-xs"
+                />
+                <div className="flex items-center justify-between text-[10px] text-[var(--color-muted)]">
+                  <span>{moodStatus.length}/60</span>
+                  <div className="flex gap-2">
+                    {profile?.mood_status && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleSaveMood('')}
+                        disabled={savingMood}
+                      >
+                        Clear
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setMoodStatus(profile?.mood_status || '');
+                        setEditSection(null);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button size="sm" onClick={() => handleSaveMood()} disabled={savingMood}>
+                      {savingMood ? 'Saving...' : 'Save'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
@@ -404,28 +514,54 @@ export default function SettingsPage() {
             <Shield className="h-3.5 w-3.5 text-emerald-500" />
             <span>Broadcast Discovery</span>
           </div>
-          <div className="px-4 py-3.5 flex items-center justify-between text-xs">
-            <div>
-              <p className="font-medium text-[var(--color-text)]">Active in Directory Pool</p>
-              <p className="text-[11px] text-[var(--color-muted)] mt-0.5">
-                When disabled, peers cannot find your callsign through broad discovery
-              </p>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={isVisible}
-              onClick={handleVisibilityToggle}
-              className={`relative w-9 h-5 rounded-full transition-colors ${
-                isVisible ? 'bg-emerald-500' : 'bg-[var(--color-border)]'
-              }`}
-            >
-              <span
-                className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                  isVisible ? 'translate-x-4' : ''
+          <div className="divide-y divide-[var(--color-border)]">
+            <div className="px-4 py-3.5 flex items-center justify-between text-xs">
+              <div>
+                <p className="font-medium text-[var(--color-text)]">Active in Directory Pool</p>
+                <p className="text-[11px] text-[var(--color-muted)] mt-0.5">
+                  When disabled, peers cannot find your callsign through broad discovery
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isVisible}
+                onClick={handleVisibilityToggle}
+                className={`relative w-9 h-5 rounded-full transition-colors shrink-0 ${
+                  isVisible ? 'bg-emerald-500' : 'bg-[var(--color-border)]'
                 }`}
-              />
-            </button>
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                    isVisible ? 'translate-x-4' : ''
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="px-4 py-3.5 flex items-center justify-between text-xs">
+              <div className="pr-4">
+                <p className="font-medium text-[var(--color-text)]">Read Receipts</p>
+                <p className="text-[11px] text-[var(--color-muted)] mt-0.5">
+                  Allow peers to see when you have read their messages
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={readReceiptsVisible}
+                onClick={handleReadReceiptsToggle}
+                className={`relative w-9 h-5 rounded-full transition-colors shrink-0 ${
+                  readReceiptsVisible ? 'bg-emerald-500' : 'bg-[var(--color-border)]'
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                    readReceiptsVisible ? 'translate-x-4' : ''
+                  }`}
+                />
+              </button>
+            </div>
           </div>
         </section>
 
